@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 interface User {
     id: number;
@@ -13,6 +13,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     isLoading: boolean;
+    isAuthenticated: boolean;
     login: (token: string, user: User) => void;
     logout: () => void;
 }
@@ -27,15 +28,11 @@ export function useAuth() {
     return context;
 }
 
-// Pages that don't require authentication
-const PUBLIC_PATHS = ["/login", "/signup", "/offline"];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const pathname = usePathname();
-    const router = useRouter();
 
     useEffect(() => {
         // Check for stored auth on mount
@@ -56,13 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }, []);
 
-    useEffect(() => {
-        // Redirect to login if not authenticated and not on public page
-        if (!isLoading && !token && !PUBLIC_PATHS.includes(pathname)) {
-            router.push("/login");
-        }
-    }, [isLoading, token, pathname, router]);
-
     const login = (newToken: string, newUser: User) => {
         setToken(newToken);
         setUser(newUser);
@@ -75,10 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         localStorage.removeItem("vision-token");
         localStorage.removeItem("vision-user");
-        router.push("/login");
+        window.location.href = "/login";
     };
 
-    // Show nothing while checking auth (prevents flash)
+    // Show loading spinner briefly
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
@@ -87,23 +77,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
     }
 
-    // Show login/signup pages without auth check
-    if (PUBLIC_PATHS.includes(pathname)) {
-        return (
-            <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
-                {children}
-            </AuthContext.Provider>
-        );
-    }
-
-    // Require auth for protected pages
-    if (!token) {
-        return null; // Will redirect in useEffect
-    }
-
     return (
-        <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            token,
+            isLoading,
+            isAuthenticated: !!token,
+            login,
+            logout
+        }}>
             {children}
         </AuthContext.Provider>
     );
 }
+
