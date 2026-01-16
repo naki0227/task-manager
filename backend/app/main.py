@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.routers import auth, tasks, skills, stats, login
+from app.database import init_db
+from app.routers import auth, tasks, skills, stats, login, users
 
 settings = get_settings()
 
@@ -20,9 +21,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database on startup
+@app.on_event("startup")
+async def startup():
+    init_db()
+
 # Routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(login.router, prefix="/auth", tags=["Login"])
+app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
 app.include_router(skills.router, prefix="/api", tags=["Skills"])
 app.include_router(stats.router, prefix="/api", tags=["Stats"])

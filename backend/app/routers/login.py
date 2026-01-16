@@ -1,17 +1,20 @@
 """
-Email/Password Authentication Router
+Email/Password Authentication Router with Database
 """
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 from jose import jwt
-from app.config import get_settings
+from sqlalchemy.orm import Session
+import hashlib
+
+from app.database import get_db
+from app.models import User
 
 router = APIRouter()
-settings = get_settings()
 
-# Secret key for JWT (in production, use a proper secret)
+# Secret key for JWT (in production, use a proper secret from env)
 SECRET_KEY = "vision-secret-key-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
@@ -34,21 +37,13 @@ class TokenResponse(BaseModel):
     user: dict
 
 
-class UserResponse(BaseModel):
-    id: int
-    email: str
-    name: str
+def hash_password(password: str) -> str:
+    """Simple password hashing (use bcrypt in production)"""
+    return hashlib.sha256(password.encode()).hexdigest()
 
 
-# Mock user database (replace with real database)
-MOCK_USERS = {
-    "user@example.com": {
-        "id": 1,
-        "email": "user@example.com",
-        "password": "password123",  # In production, hash passwords!
-        "name": "Test User",
-    }
-}
+def verify_password(password: str, hashed: str) -> bool:
+    return hash_password(password) == hashed
 
 
 def create_access_token(data: dict) -> str:
@@ -59,66 +54,52 @@ def create_access_token(data: dict) -> str:
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Email/Password login"""
-    user = MOCK_USERS.get(request.email)
+    user = db.query(User).filter(User.email == request.email).first()
     
-    if not user or user["password"] != request.password:
+    if not user:
         raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
     
-    access_token = create_access_token({"sub": user["email"], "user_id": user["id"]})
+    if not user.password_hash or not verify_password(request.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
+    
+    access_token = create_access_token({"sub": user.email, "user_id": user.id})
     
     return TokenResponse(
         access_token=access_token,
         user={
-            "id": user["id"],
-            "email": user["email"],
-            "name": user["name"],
+            "id": user.id,
+            "email": user.email,
+            "name": user.name or "",
         }
     )
 
 
 @router.post("/signup", response_model=TokenResponse)
-async def signup(request: SignupRequest):
+async def signup(request: SignupRequest, db: Session = Depends(get_db)):
     """Create new account"""
-    if request.email in MOCK_USERS:
+    existing = db.query(User).filter(User.email == request.email).first()
+    if existing:
         raise HTTPException(status_code=400, detail="このメールアドレスは既に登録されています")
     
-    # Create new user (in production, hash password and save to database)
-    new_user = {
-        "id": len(MOCK_USERS) + 1,
-        "email": request.email,
-        "password": request.password,
-        "name": request.name or request.email.split("@")[0],
-    }
-    MOCK_USERS[request.email] = new_user
+    # Create new user
+    new_user = User(
+        email=request.email,
+        password_hash=hash_password(request.password),
+        name=request.name or request.email.split("@")[0],
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
     
-    access_token = create_access_token({"sub": new_user["email"], "user_id": new_user["id"]})
+    access_token = create_access_token({"sub": new_user.email, "user_id": new_user.id})
     
     return TokenResponse(
         access_token=access_token,
         user={
-            "id": new_user["id"],
-            "email": new_user["email"],
-            "name": new_user["name"],
+            "id": new_user.id,
+            "email": new_user.email,
+            "name": new_user.name or "",
         }
     )
-
-
-@router.get("/me", response_model=UserResponse)
-async def get_current_user(authorization: str = None):
-    """Get current user from token"""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="認証が必要です")
-    
-    token = authorization.replace("Bearer ", "")
-    
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-        user = MOCK_USERS.get(email)
-        if not user:
-            raise HTTPException(status_code=401, detail="ユーザーが見つかりません")
-        return UserResponse(id=user["id"], email=user["email"], name=user["name"])
-    except jwt.JWTError:
-        raise HTTPException(status_code=401, detail="無効なトークンです")
