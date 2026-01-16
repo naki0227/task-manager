@@ -12,21 +12,30 @@ import {
     Flame,
     Zap,
     Menu,
-    X
+    X,
+    BarChart3,
+    Calendar,
+    MessageCircle,
+    Timer
 } from "lucide-react";
 import { useState } from "react";
+import { FocusTimer } from "@/components/dashboard/FocusTimer";
 
 const NAV_ITEMS = [
     { label: "ダッシュボード", href: "/", icon: Home },
+    { label: "統計", href: "/stats", icon: BarChart3 },
+    { label: "カレンダー", href: "/calendar", icon: Calendar },
     { label: "思考ノード", href: "/thinking", icon: Brain },
     { label: "コンテキスト", href: "/resume", icon: History },
     { label: "スキル", href: "/skills", icon: Trophy },
+    { label: "チャット", href: "/chat", icon: MessageCircle },
     { label: "設定", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const [showTimer, setShowTimer] = useState(false);
 
     return (
         <>
@@ -65,8 +74,26 @@ export function Sidebar() {
                     </div>
                 </div>
 
+                {/* Focus Timer Toggle */}
+                <div className="px-3 mb-2">
+                    <button
+                        onClick={() => setShowTimer(!showTimer)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+                    >
+                        <Timer className="w-4 h-4" />
+                        Focus Timer
+                    </button>
+                </div>
+
+                {/* Focus Timer Panel */}
+                {showTimer && (
+                    <div className="px-3 mb-4">
+                        <FocusTimer />
+                    </div>
+                )}
+
                 {/* Navigation */}
-                <nav className="flex-1 px-3">
+                <nav className="flex-1 px-3 overflow-y-auto">
                     <p className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                         メニュー
                     </p>
@@ -94,6 +121,11 @@ export function Sidebar() {
                         })}
                     </ul>
                 </nav>
+
+                {/* Keyboard Shortcuts Hint */}
+                <div className="px-6 py-2 text-[10px] text-muted-foreground">
+                    <kbd className="px-1 bg-muted rounded">g</kbd>+<kbd className="px-1 bg-muted rounded">d</kbd> ダッシュボード
+                </div>
 
                 {/* Streak Counter */}
                 <div className="p-4 border-t border-border">
