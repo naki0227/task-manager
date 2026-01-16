@@ -101,13 +101,44 @@ export default function SettingsPage() {
     });
 
     useEffect(() => {
+        // Load preferences
         const prefs = getUserPreferences();
         setToggles({
             notificationsEnabled: prefs.notificationsEnabled,
             soundEnabled: prefs.soundEnabled,
         });
         setTheme(getStoredTheme());
-    }, []);
+
+        // Load connected services from localStorage
+        const storedServices = localStorage.getItem("vision-connected-services");
+        if (storedServices) {
+            try {
+                const parsed = JSON.parse(storedServices);
+                setConnectedServices(prev => ({ ...prev, ...parsed }));
+            } catch (e) {
+                console.error("Failed to parse connected services");
+            }
+        }
+
+        // Check URL params for OAuth callback
+        const params = new URLSearchParams(window.location.search);
+        const services = ["github", "google", "slack", "notion", "discord", "linear", "todoist"];
+
+        for (const service of services) {
+            if (params.get(service) === "connected") {
+                setConnectedServices(prev => {
+                    const updated = { ...prev, [service]: true };
+                    localStorage.setItem("vision-connected-services", JSON.stringify(updated));
+                    return updated;
+                });
+                showToast("success", `${OAUTH_CONFIG[service]?.label || service} と連携しました！`);
+
+                // Clean URL
+                window.history.replaceState({}, "", "/settings");
+                break;
+            }
+        }
+    }, [showToast]);
 
     const handleToggle = (key: string) => {
         const newValue = !toggles[key];
