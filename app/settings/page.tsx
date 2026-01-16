@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
     User, Bell, Palette, Shield, Database, ExternalLink,
-    Moon, Sun, Monitor, Github, Calendar, MessageSquare, Check
+    Moon, Sun, Monitor, Github, Calendar, MessageSquare, Check, Mail, BookOpen,
+    Layers, CheckSquare, Hash, FileText, Apple
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { getUserPreferences, setUserPreferences, getStoredTheme, setStoredTheme } from "@/lib/storage";
@@ -15,7 +16,7 @@ interface SettingItem {
     toggle?: boolean;
     toggleKey?: string;
     theme?: boolean;
-    oauth?: "github" | "google" | "googleTasks" | "slack";
+    oauth?: string;
 }
 
 interface SettingSection {
@@ -38,9 +39,16 @@ const SETTINGS_SECTIONS: SettingSection[] = [
         icon: MessageSquare,
         items: [
             { label: "GitHub", description: "リポジトリとIssueを同期", oauth: "github" },
+            { label: "Linear", description: "Issueトラッキングを同期", oauth: "linear" },
             { label: "Google カレンダー", description: "予定をタスクに変換", oauth: "google" },
+            { label: "Apple カレンダー", description: "iCloud予定を同期", oauth: "apple" },
             { label: "Google Tasks", description: "タスクを双方向同期", oauth: "googleTasks" },
+            { label: "Todoist", description: "既存タスクを移行", oauth: "todoist" },
+            { label: "Gmail", description: "メールからタスクを抽出", oauth: "gmail" },
+            { label: "Notion", description: "ページ・DBを同期", oauth: "notion" },
+            { label: "Obsidian", description: "ローカルノートを連携", oauth: "obsidian" },
             { label: "Slack", description: "メッセージからタスクを抽出", oauth: "slack" },
+            { label: "Discord", description: "サーバー通知を取得", oauth: "discord" },
         ],
     },
     {
@@ -68,11 +76,18 @@ const SETTINGS_SECTIONS: SettingSection[] = [
     },
 ];
 
-const OAUTH_CONFIG = {
+const OAUTH_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; label: string }> = {
     github: { icon: Github, color: "from-gray-700 to-gray-900", label: "GitHub" },
+    linear: { icon: Layers, color: "from-indigo-500 to-indigo-600", label: "Linear" },
     google: { icon: Calendar, color: "from-blue-500 to-blue-600", label: "Google Calendar" },
+    apple: { icon: Apple, color: "from-gray-600 to-gray-800", label: "Apple Calendar" },
     googleTasks: { icon: Check, color: "from-green-500 to-green-600", label: "Google Tasks" },
+    todoist: { icon: CheckSquare, color: "from-red-500 to-red-600", label: "Todoist" },
+    gmail: { icon: Mail, color: "from-red-400 to-red-500", label: "Gmail" },
+    notion: { icon: BookOpen, color: "from-gray-800 to-gray-900", label: "Notion" },
+    obsidian: { icon: FileText, color: "from-purple-600 to-purple-800", label: "Obsidian" },
     slack: { icon: MessageSquare, color: "from-purple-500 to-purple-600", label: "Slack" },
+    discord: { icon: Hash, color: "from-indigo-500 to-indigo-700", label: "Discord" },
 };
 
 export default function SettingsPage() {
@@ -80,13 +95,11 @@ export default function SettingsPage() {
     const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
     const [toggles, setToggles] = useState<Record<string, boolean>>({});
     const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({
-        github: false,
-        google: false,
-        googleTasks: false,
-        slack: false,
+        github: false, linear: false, google: false, apple: false,
+        googleTasks: false, todoist: false, gmail: false,
+        notion: false, obsidian: false, slack: false, discord: false,
     });
 
-    // Load saved settings on mount
     useEffect(() => {
         const prefs = getUserPreferences();
         setToggles({
@@ -96,7 +109,6 @@ export default function SettingsPage() {
         setTheme(getStoredTheme());
     }, []);
 
-    // Handle toggle change
     const handleToggle = (key: string) => {
         const newValue = !toggles[key];
         setToggles(prev => ({ ...prev, [key]: newValue }));
@@ -104,35 +116,31 @@ export default function SettingsPage() {
         showToast("success", "設定を保存しました");
     };
 
-    // Handle theme change
     const handleThemeChange = (newTheme: "dark" | "light" | "system") => {
         setTheme(newTheme);
         setStoredTheme(newTheme);
         showToast("success", `テーマを「${newTheme === "dark" ? "ダーク" : newTheme === "light" ? "ライト" : "システム"}」に変更しました`);
     };
 
-    // Handle OAuth connection
-    const handleOAuthConnect = (service: "github" | "google" | "googleTasks" | "slack") => {
-        // In real implementation, this would redirect to OAuth flow
-        // For now, simulate connection
+    const handleOAuthConnect = (service: string) => {
         setConnectedServices(prev => ({ ...prev, [service]: !prev[service] }));
         const config = OAUTH_CONFIG[service];
-        if (!connectedServices[service]) {
-            showToast("success", `${config.label} と連携しました`);
-        } else {
-            showToast("info", `${config.label} との連携を解除しました`);
+        if (config) {
+            if (!connectedServices[service]) {
+                showToast("success", `${config.label} と連携しました`);
+            } else {
+                showToast("info", `${config.label} との連携を解除しました`);
+            }
         }
     };
 
     return (
         <div className="max-w-3xl">
-            {/* Header */}
             <header className="mb-8">
                 <h1 className="text-2xl font-bold">設定</h1>
                 <p className="text-muted-foreground mt-1">アプリの設定をカスタマイズ</p>
             </header>
 
-            {/* Settings Sections */}
             <div className="space-y-8">
                 {SETTINGS_SECTIONS.map((section) => {
                     const Icon = section.icon;
@@ -160,11 +168,9 @@ export default function SettingsPage() {
                                         {item.toggle && item.toggleKey && (
                                             <button
                                                 onClick={() => handleToggle(item.toggleKey!)}
-                                                className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.toggleKey] ? "bg-primary" : "bg-muted"
-                                                    }`}
+                                                className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.toggleKey] ? "bg-primary" : "bg-muted"}`}
                                             >
-                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${toggles[item.toggleKey] ? "left-6" : "left-1"
-                                                    }`} />
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${toggles[item.toggleKey] ? "left-6" : "left-1"}`} />
                                             </button>
                                         )}
 
@@ -178,8 +184,7 @@ export default function SettingsPage() {
                                                     <button
                                                         key={value}
                                                         onClick={() => handleThemeChange(value)}
-                                                        className={`p-2 rounded-md transition-colors ${theme === value ? "bg-card text-primary" : "text-muted-foreground hover:text-foreground"
-                                                            }`}
+                                                        className={`p-2 rounded-md transition-colors ${theme === value ? "bg-card text-primary" : "text-muted-foreground hover:text-foreground"}`}
                                                     >
                                                         <ThemeIcon className="w-4 h-4" />
                                                     </button>
@@ -187,12 +192,12 @@ export default function SettingsPage() {
                                             </div>
                                         )}
 
-                                        {item.oauth && (
+                                        {item.oauth && OAUTH_CONFIG[item.oauth] && (
                                             <button
                                                 onClick={() => handleOAuthConnect(item.oauth!)}
                                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectedServices[item.oauth]
-                                                    ? "bg-accent/10 text-accent border border-accent/20"
-                                                    : `bg-gradient-to-r ${OAUTH_CONFIG[item.oauth].color} text-white`
+                                                        ? "bg-accent/10 text-accent border border-accent/20"
+                                                        : `bg-gradient-to-r ${OAUTH_CONFIG[item.oauth].color} text-white`
                                                     }`}
                                             >
                                                 {connectedServices[item.oauth] ? (
@@ -218,7 +223,6 @@ export default function SettingsPage() {
                     );
                 })}
 
-                {/* Danger Zone */}
                 <section>
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-destructive" />

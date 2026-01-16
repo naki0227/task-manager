@@ -266,6 +266,32 @@ async def google_tasks_callback(code: str):
 # 参考: https://developers.google.com/tasks/reference/rest
 ```
 
+### Gmail
+
+```python
+@app.get("/auth/gmail/callback")
+async def gmail_callback(code: str):
+    # Gmail API でメールを取得
+    # Gemini で解析して、タスク候補を抽出
+    # 例: 「〜してください」「deadline: 〜」などのパターン
+    
+# スコープ: https://www.googleapis.com/auth/gmail.readonly
+# フィルタ: 未読、重要ラベル、特定の送信者など
+```
+
+### Notion
+
+```python
+@app.get("/auth/notion/callback")
+async def notion_callback(code: str):
+    # Notion API でページ/データベースを取得
+    # タスクDBと双方向同期
+    # ドキュメントをコンテキストとして保存
+
+# スコープ: read_content, update_content
+# 参考: https://developers.notion.com/reference/intro
+```
+
 ### Slack
 
 ```python
@@ -273,6 +299,67 @@ async def google_tasks_callback(code: str):
 async def slack_callback(code: str):
     # メッセージを取得
     # AI で分析してタスク候補を抽出
+```
+
+### Linear
+
+```python
+@app.get("/auth/linear/callback")
+async def linear_callback(code: str):
+    # Linear API で Issue を取得
+    # Vision タスクとして準備
+    
+# 参考: https://developers.linear.app/docs/graphql/working-with-the-graphql-api
+```
+
+### Todoist
+
+```python
+@app.get("/auth/todoist/callback")
+async def todoist_callback(code: str):
+    # Todoist REST API でタスクを取得
+    # Vision タスクと双方向同期
+    
+# 参考: https://developer.todoist.com/rest/v2/
+```
+
+### Discord
+
+```python
+@app.get("/auth/discord/callback")
+async def discord_callback(code: str):
+    # Discord Bot でサーバー通知を取得
+    # メンション、DM をタスク候補として抽出
+    
+# 参考: https://discord.com/developers/docs/intro
+```
+
+### Apple Calendar (CalDAV)
+
+```python
+# Apple Calendar は CalDAV プロトコルで接続
+# iCloud 連携には App-Specific Password が必要
+
+async def sync_apple_calendar(username: str, app_password: str):
+    # caldav ライブラリで iCloud カレンダーに接続
+    # イベントを取得してタスク化
+    
+# pip install caldav
+# 参考: https://www.icloud.com/calendar/
+```
+
+### Obsidian (ローカル連携)
+
+```python
+# Obsidian はローカルファイルベースのため OAuth 不要
+# ユーザーが Vault パスを指定
+
+async def watch_obsidian_vault(vault_path: str):
+    # watchdog でファイル変更を監視
+    # デイリーノートからタスクを抽出
+    # TODOリスト (- [ ]) をパース
+    
+# pip install watchdog
 ```
 
 ---
@@ -337,6 +424,9 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 SLACK_CLIENT_ID=your_slack_client_id
 SLACK_CLIENT_SECRET=your_slack_client_secret
+NOTION_CLIENT_ID=your_notion_client_id
+NOTION_CLIENT_SECRET=your_notion_client_secret
+# Gmail uses same Google OAuth with different scopes
 
 # Database
 DATABASE_URL=sqlite:///./vision.db
