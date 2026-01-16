@@ -2,49 +2,60 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Zap, Github, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Zap, Github, Mail, Lock, Eye, EyeOff, ArrowRight, User } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export default function LoginPage() {
+export default function SignupPage() {
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const handleEmailLogin = async (e: React.FormEvent) => {
+    const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
         setError("");
 
+        if (password !== confirmPassword) {
+            setError("パスワードが一致しません");
+            return;
+        }
+
+        if (password.length < 6) {
+            setError("パスワードは6文字以上にしてください");
+            return;
+        }
+
+        setIsLoading(true);
+
         try {
-            const response = await fetch(`${API_URL}/auth/login`, {
+            const response = await fetch(`${API_URL}/auth/signup`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email, password, name }),
             });
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.detail || "ログインに失敗しました");
+                throw new Error(data.detail || "登録に失敗しました");
             }
 
             const data = await response.json();
-            // Store token and user
             localStorage.setItem("vision-token", data.access_token);
             localStorage.setItem("vision-user", JSON.stringify(data.user));
-            // Force full page reload to update auth state
-            window.location.replace("/");
+            window.location.href = "/";
         } catch (err) {
             setError(err instanceof Error ? err.message : "エラーが発生しました");
+        } finally {
             setIsLoading(false);
         }
     };
 
-    const handleOAuthLogin = (provider: string) => {
-        // Redirect to backend OAuth endpoint
+    const handleOAuthSignup = (provider: string) => {
         window.location.href = `${API_URL}/auth/${provider}`;
     };
 
@@ -66,21 +77,21 @@ export default function LoginPage() {
                     <p className="text-muted-foreground mt-2">AIが準備、あとは始めるだけ</p>
                 </div>
 
-                {/* Login Card */}
+                {/* Signup Card */}
                 <div className="card">
-                    <h2 className="text-xl font-semibold mb-6 text-center">ログイン</h2>
+                    <h2 className="text-xl font-semibold mb-6 text-center">新規登録</h2>
 
                     {/* OAuth Buttons */}
                     <div className="space-y-3 mb-6">
                         <button
-                            onClick={() => handleOAuthLogin("github")}
+                            onClick={() => handleOAuthSignup("github")}
                             className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                         >
                             <Github className="w-5 h-5" />
-                            GitHub でログイン
+                            GitHub で登録
                         </button>
                         <button
-                            onClick={() => handleOAuthLogin("google")}
+                            onClick={() => handleOAuthSignup("google")}
                             className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 rounded-lg font-medium transition-colors"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -89,7 +100,7 @@ export default function LoginPage() {
                                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                             </svg>
-                            Google でログイン
+                            Google で登録
                         </button>
                     </div>
 
@@ -100,13 +111,27 @@ export default function LoginPage() {
                         <div className="flex-1 border-t border-border" />
                     </div>
 
-                    {/* Email Form */}
-                    <form onSubmit={handleEmailLogin} className="space-y-4">
+                    {/* Form */}
+                    <form onSubmit={handleSignup} className="space-y-4">
                         {error && (
                             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                                 {error}
                             </div>
                         )}
+
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5">名前</label>
+                            <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="表示名"
+                                    className="w-full pl-10 pr-4 py-3 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
 
                         <div>
                             <label className="block text-sm font-medium mb-1.5">メールアドレス</label>
@@ -131,7 +156,7 @@ export default function LoginPage() {
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="••••••••"
+                                    placeholder="6文字以上"
                                     className="w-full pl-10 pr-12 py-3 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     required
                                 />
@@ -145,27 +170,39 @@ export default function LoginPage() {
                             </div>
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium mb-1.5">パスワード（確認）</label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="もう一度入力"
+                                    className="w-full pl-10 pr-4 py-3 bg-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                    required
+                                />
+                            </div>
+                        </div>
+
                         <button
                             type="submit"
                             disabled={isLoading}
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:opacity-90 text-white rounded-lg font-medium transition-opacity disabled:opacity-50"
                         >
-                            {isLoading ? (
-                                "ログイン中..."
-                            ) : (
+                            {isLoading ? "登録中..." : (
                                 <>
-                                    ログイン
+                                    登録する
                                     <ArrowRight className="w-4 h-4" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    {/* Sign Up Link */}
                     <p className="mt-6 text-center text-sm text-muted-foreground">
-                        アカウントをお持ちでない方は{" "}
-                        <Link href="/signup" className="text-primary hover:underline">
-                            新規登録
+                        すでにアカウントをお持ちの方は{" "}
+                        <Link href="/login" className="text-primary hover:underline">
+                            ログイン
                         </Link>
                     </p>
                 </div>
