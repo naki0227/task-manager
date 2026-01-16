@@ -1,71 +1,84 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: 222 47% 4%;
-    /* #030712 - Deep Void */
-    --foreground: 210 40% 98%;
-    /* #f8fafc */
+:root {
+  /* v8: Zenn-inspired Dark Theme for Engineers */
+  --background: #0f172a;
+  /* Slate 900 */
+  --foreground: #f8fafc;
+  /* Slate 50 */
 
-    --card: 222 47% 6%;
-    --card-foreground: 210 40% 98%;
+  --card: #1e293b;
+  /* Slate 800 */
+  --card-foreground: #f8fafc;
 
-    --popover: 222 47% 6%;
-    --popover-foreground: 210 40% 98%;
+  --primary: #3ea8ff;
+  /* Zenn Blue */
+  --primary-foreground: #ffffff;
 
-    --primary: 186 100% 50%;
-    /* #00f3ff - Cyan Neon */
-    --primary-foreground: 222 47% 4%;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+  --muted: #334155;
+  /* Slate 700 */
+  --muted-foreground: #94a3b8;
+  /* Slate 400 */
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+  --accent: #22c55e;
+  /* Green 500 */
+  --accent-foreground: #ffffff;
 
-    --accent: 186 100% 50%;
-    /* Same as primary for strong highlights */
-    --accent-foreground: 222 47% 4%;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+  --border: #334155;
+  --input: #334155;
+  --ring: #3ea8ff;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 186 100% 50%;
-
-    --radius: 0.5rem;
-  }
+  --radius: 0.75rem;
+  --sidebar-width: 260px;
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
+* {
+  border-color: var(--border);
 }
 
-/* Custom scrollbar for Webkit */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-::-webkit-scrollbar-track {
-  background: hsl(var(--background));
+::selection {
+  background-color: rgba(62, 168, 255, 0.3);
+  color: var(--foreground);
 }
 
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--secondary));
-  border-radius: 4px;
+/* Card Styles */
+.card {
+  background-color: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  border-color: rgba(62, 168, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(62, 168, 255, 0.1), 0 4px 20px rgba(62, 168, 255, 0.1);
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #3ea8ff, #60c5ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow Effect */
+.glow {
+  box-shadow: 0 0 20px rgba(62, 168, 255, 0.3);
 }

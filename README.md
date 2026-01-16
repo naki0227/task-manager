@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vision - Autonomous Life OS
 
-## Getting Started
+> **「AIが準備、あとは始めるだけ」** - 意志を必要としない自律型ライフOS
 
-First, run the development server:
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+## 🎯 コンセプト
+
+従来のタスク管理は「やることリストを見て、自分で頑張る」。  
+Visionは違います。**AIが勝手に準備を終わらせ、あとは実行するだけ**。
+
+- 🚀 **Zero Start**: フォルダ作成、初期コード、資料要約をAIが自動実行
+- 🧠 **Flow Synergy**: 思考をノードグラフ化、論理の飛躍を検知
+- 💸 **Loss Aversion**: サボりの機会損失をリアルタイム可視化
+- 🔄 **Infinite Resume**: ボタン一つで作業環境を完全復元
+- 🎮 **Auto Skill Tree**: 成果物からRPG風スキルツリーを自動生成
+
+## 🛠️ 技術スタック
+
+- **Frontend**: Next.js 16, React, Tailwind CSS, Framer Motion, React Flow
+- **Backend**: Python (FastAPI) - *別リポジトリ*
+- **AI**: Gemini 2.5 Flash API
+
+## 📦 セットアップ
 
 ```bash
+# リポジトリをクローン
+git clone https://github.com/your-org/vision.git
+cd vision
+
+# 依存関係をインストール
+npm install
+
+# 開発サーバーを起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 でアプリが起動します。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 プロジェクト構成
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+vision/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # ダッシュボード
+│   ├── thinking/          # 思考ノード (Flow Synergy)
+│   ├── skills/            # スキルツリー
+│   ├── resume/            # Infinite Resume
+│   ├── projects/          # プロジェクト一覧
+│   └── settings/          # 設定 (OAuth連携含む)
+├── components/
+│   ├── dashboard/         # ダッシュボードコンポーネント
+│   ├── visuals/           # グラフ・ツリー可視化
+│   ├── layout/            # レイアウト (Sidebar等)
+│   ├── ui/                # 共通UI (Toast, Skeleton等)
+│   └── onboarding/        # オンボーディング
+├── lib/
+│   ├── api.ts             # API クライアント (Python連携用)
+│   ├── storage.ts         # ローカルストレージ
+│   └── utils.ts           # ユーティリティ
+└── public/
+    └── manifest.json      # PWA設定
+```
 
-## Learn More
+## 🔗 API連携 (Python チーム向け)
 
-To learn more about Next.js, take a look at the following resources:
+詳細は [BACKEND_SPEC.md](./docs/BACKEND_SPEC.md) を参照してください。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### エンドポイント一覧
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Method | Endpoint | 説明 |
+|--------|----------|------|
+| GET | `/api/prepared-tasks` | AI準備済みタスク一覧 |
+| POST | `/api/prepared-tasks/:id/start` | タスク開始 |
+| GET | `/api/ai-activities` | AI活動ログ |
+| GET | `/api/snapshots` | コンテキストスナップショット |
+| POST | `/api/snapshots/:id/resume` | 環境復元 |
+| GET | `/api/skills` | スキルデータ |
+| POST | `/api/dream/analyze` | 夢→ステップ分解 |
 
-## Deploy on Vercel
+## ⌨️ キーボードショートカット
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| ショートカット | 動作 |
+|---------------|------|
+| `Cmd/Ctrl + K` | グローバル検索 |
+| `Esc` | モーダルを閉じる |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 👥 チームメンバー
+
+- **Frontend**: Vision UI 担当
+- **Backend (Python)**: API / AI連携担当
+
+## 📄 ライセンス
+
+MIT

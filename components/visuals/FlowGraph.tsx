@@ -3,8 +3,6 @@
 import { useCallback } from "react";
 import ReactFlow, {
     Background,
-    Controls,
-    MiniMap,
     useNodesState,
     useEdgesState,
     addEdge,
@@ -18,26 +16,57 @@ const initialNodes: Node[] = [
     {
         id: "1",
         position: { x: 0, y: 0 },
-        data: { label: "Project: Vision" },
-        style: { background: "#0f172a", border: "1px solid #00f3ff", color: "#fff", width: 180 }
+        data: { label: "VISION" },
+        style: {
+            background: "#0044ff",
+            border: "none",
+            color: "#fff",
+            fontFamily: "var(--font-heading)",
+            fontSize: "24px",
+            width: 160,
+            padding: "20px",
+            borderRadius: "100px",
+            textAlign: "center",
+            boxShadow: "0 20px 40px -10px rgba(0, 68, 255, 0.4)"
+        }
     },
     {
         id: "2",
-        position: { x: 0, y: 100 },
+        position: { x: -100, y: 140 },
         data: { label: "Frontend" },
-        style: { background: "#0f172a", border: "1px solid #1e293b", color: "#94a3b8", width: 150 }
+        style: {
+            background: "rgba(255,255,255,0.8)",
+            border: "1px solid #fff",
+            color: "#0044ff",
+            fontWeight: "bold",
+            width: 120,
+            padding: "10px",
+            borderRadius: "30px",
+            textAlign: "center",
+            backdropFilter: "blur(10px)"
+        }
     },
     {
         id: "3",
-        position: { x: 200, y: 100 },
+        position: { x: 100, y: 140 },
         data: { label: "Backend" },
-        style: { background: "#0f172a", border: "1px solid #1e293b", color: "#94a3b8", width: 150 }
+        style: {
+            background: "rgba(255,255,255,0.8)",
+            border: "1px solid #fff",
+            color: "#0044ff",
+            fontWeight: "bold",
+            width: 120,
+            padding: "10px",
+            borderRadius: "30px",
+            textAlign: "center",
+            backdropFilter: "blur(10px)"
+        }
     },
 ];
 
 const initialEdges: Edge[] = [
-    { id: "e1-2", source: "1", target: "2", animated: true, style: { stroke: "#00f3ff" } },
-    { id: "e1-3", source: "1", target: "3", animated: true, style: { stroke: "#00f3ff" } },
+    { id: "e1-2", source: "1", target: "2", style: { stroke: "#0044ff", strokeWidth: 2 } },
+    { id: "e1-3", source: "1", target: "3", style: { stroke: "#0044ff", strokeWidth: 2 } },
 ];
 
 export function FlowGraph() {
@@ -50,11 +79,7 @@ export function FlowGraph() {
     );
 
     return (
-        <div className="h-[400px] w-full rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-xs font-mono text-primary">LOGIC_TRACE_ACTIVE</span>
-            </div>
+        <div className="h-full w-full relative">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -62,14 +87,9 @@ export function FlowGraph() {
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 fitView
+                proOptions={{ hideAttribution: true }}
             >
-                <Background color="#1e293b" gap={20} />
-                <Controls className="bg-background border border-white/10 fill-white" />
-                <MiniMap
-                    nodeColor={() => '#00f3ff'}
-                    maskColor="rgba(0,0,0, 0.7)"
-                    className="bg-background border border-white/10"
-                />
+                <Background color="#0044ff" gap={40} size={1} style={{ opacity: 0.05 }} />
             </ReactFlow>
         </div>
     );
