@@ -15,7 +15,7 @@ interface SettingItem {
     toggle?: boolean;
     toggleKey?: string;
     theme?: boolean;
-    oauth?: "github" | "google" | "slack";
+    oauth?: "github" | "google" | "googleTasks" | "slack";
 }
 
 interface SettingSection {
@@ -39,6 +39,7 @@ const SETTINGS_SECTIONS: SettingSection[] = [
         items: [
             { label: "GitHub", description: "リポジトリとIssueを同期", oauth: "github" },
             { label: "Google カレンダー", description: "予定をタスクに変換", oauth: "google" },
+            { label: "Google Tasks", description: "タスクを双方向同期", oauth: "googleTasks" },
             { label: "Slack", description: "メッセージからタスクを抽出", oauth: "slack" },
         ],
     },
@@ -69,7 +70,8 @@ const SETTINGS_SECTIONS: SettingSection[] = [
 
 const OAUTH_CONFIG = {
     github: { icon: Github, color: "from-gray-700 to-gray-900", label: "GitHub" },
-    google: { icon: Calendar, color: "from-blue-500 to-blue-600", label: "Google" },
+    google: { icon: Calendar, color: "from-blue-500 to-blue-600", label: "Google Calendar" },
+    googleTasks: { icon: Check, color: "from-green-500 to-green-600", label: "Google Tasks" },
     slack: { icon: MessageSquare, color: "from-purple-500 to-purple-600", label: "Slack" },
 };
 
@@ -80,6 +82,7 @@ export default function SettingsPage() {
     const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({
         github: false,
         google: false,
+        googleTasks: false,
         slack: false,
     });
 
@@ -109,7 +112,7 @@ export default function SettingsPage() {
     };
 
     // Handle OAuth connection
-    const handleOAuthConnect = (service: "github" | "google" | "slack") => {
+    const handleOAuthConnect = (service: "github" | "google" | "googleTasks" | "slack") => {
         // In real implementation, this would redirect to OAuth flow
         // For now, simulate connection
         setConnectedServices(prev => ({ ...prev, [service]: !prev[service] }));
@@ -188,8 +191,8 @@ export default function SettingsPage() {
                                             <button
                                                 onClick={() => handleOAuthConnect(item.oauth!)}
                                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectedServices[item.oauth]
-                                                        ? "bg-accent/10 text-accent border border-accent/20"
-                                                        : `bg-gradient-to-r ${OAUTH_CONFIG[item.oauth].color} text-white`
+                                                    ? "bg-accent/10 text-accent border border-accent/20"
+                                                    : `bg-gradient-to-r ${OAUTH_CONFIG[item.oauth].color} text-white`
                                                     }`}
                                             >
                                                 {connectedServices[item.oauth] ? (

@@ -254,6 +254,18 @@ async def google_callback(code: str):
     # タスクとして準備
 ```
 
+### Google Tasks
+
+```python
+@app.get("/auth/google-tasks/callback")
+async def google_tasks_callback(code: str):
+    # Google Tasks API でタスクリストを取得
+    # Vision タスクと双方向同期
+    
+# スコープ: https://www.googleapis.com/auth/tasks
+# 参考: https://developers.google.com/tasks/reference/rest
+```
+
 ### Slack
 
 ```python
