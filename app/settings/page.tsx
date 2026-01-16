@@ -123,14 +123,41 @@ export default function SettingsPage() {
     };
 
     const handleOAuthConnect = (service: string) => {
-        setConnectedServices(prev => ({ ...prev, [service]: !prev[service] }));
         const config = OAUTH_CONFIG[service];
-        if (config) {
-            if (!connectedServices[service]) {
-                showToast("success", `${config.label} と連携しました`);
-            } else {
-                showToast("info", `${config.label} との連携を解除しました`);
-            }
+        if (!config) return;
+
+        // If already connected, disconnect (mock for now)
+        if (connectedServices[service]) {
+            setConnectedServices(prev => ({ ...prev, [service]: false }));
+            showToast("info", `${config.label} との連携を解除しました`);
+            return;
+        }
+
+        // Redirect to backend OAuth endpoint
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+        // Map service names to backend endpoints
+        const endpointMap: Record<string, string> = {
+            github: "github",
+            linear: "linear",
+            google: "google",
+            apple: "apple",  // Not implemented yet
+            googleTasks: "google",  // Same as google with different scope
+            todoist: "todoist",
+            gmail: "google",  // Same as google with different scope
+            notion: "notion",
+            obsidian: "obsidian",  // Local only, no OAuth
+            slack: "slack",
+            discord: "discord",
+        };
+
+        const endpoint = endpointMap[service];
+        if (endpoint && endpoint !== "apple" && endpoint !== "obsidian") {
+            window.location.href = `${API_URL}/auth/${endpoint}`;
+        } else if (service === "obsidian") {
+            showToast("info", "Obsidian はローカル連携です。Vault パスを設定してください。");
+        } else {
+            showToast("error", `${config.label} は未実装です`);
         }
     };
 
@@ -196,8 +223,8 @@ export default function SettingsPage() {
                                             <button
                                                 onClick={() => handleOAuthConnect(item.oauth!)}
                                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectedServices[item.oauth]
-                                                        ? "bg-accent/10 text-accent border border-accent/20"
-                                                        : `bg-gradient-to-r ${OAUTH_CONFIG[item.oauth].color} text-white`
+                                                    ? "bg-accent/10 text-accent border border-accent/20"
+                                                    : `bg-gradient-to-r ${OAUTH_CONFIG[item.oauth].color} text-white`
                                                     }`}
                                             >
                                                 {connectedServices[item.oauth] ? (
