@@ -160,6 +160,92 @@ ws://localhost:8000/ws/activities
 - 完了したタスク/成果物を解析
 - 関連スキルを特定し、経験値を加算
 
+#### POST `/api/skills/analyze`
+
+GitHub の成果物からスキルを AI 分析する。
+
+**Request:**
+```json
+{
+  "source": "github",
+  "repoUrl": "https://github.com/user/vision",
+  "sinceDays": 7
+}
+```
+
+**Response:**
+```json
+{
+  "analyzedCommits": 15,
+  "skillUpdates": [
+    { "skillId": "react", "expGain": 45, "reason": "React Hooks を複数実装" },
+    { "skillId": "typescript", "expGain": 30, "reason": "型定義を追加" },
+    { "skillId": "css", "expGain": 20, "reason": "Tailwind でUIを構築" }
+  ],
+  "newSkillsDetected": ["framer-motion"],
+  "summary": "今週はフロントエンド開発に集中。React と TypeScript のスキルが向上しています。"
+}
+```
+
+**実装 (Gemini API)**:
+```python
+async def analyze_github_skills(repo_url: str, since_days: int):
+    # 1. GitHub API でコミット/PR を取得
+    commits = await github_api.get_recent_commits(repo_url, since_days)
+    
+    # 2. 各コミットの diff を取得
+    code_samples = []
+    for commit in commits[:10]:  # 最新10件
+        diff = await github_api.get_commit_diff(commit.sha)
+        code_samples.append(diff)
+    
+    # 3. Gemini で分析
+    prompt = f"""
+以下のコード変更を分析して、開発者のスキルを評価してください。
+
+コード変更:
+{code_samples}
+
+以下の形式で JSON を返してください:
+{{
+  "skillUpdates": [
+    {{ "skillId": "スキルID", "expGain": 経験値(1-100), "reason": "理由" }}
+  ],
+  "newSkillsDetected": ["新しく検出されたスキル"],
+  "summary": "総評（50文字以内）"
+}}
+
+評価基準:
+- コードの品質と複雑さ
+- 使用しているライブラリ/フレームワーク
+- 設計パターンの理解度
+- ベストプラクティスの遵守
+"""
+    
+    result = await gemini.generate(prompt)
+    return parse_skill_analysis(result)
+```
+
+**スキルマッピング:**
+```python
+SKILL_MAPPING = {
+    # Frontend
+    "react": ["React", "jsx", "tsx", "hooks", "useState", "useEffect"],
+    "nextjs": ["Next.js", "getServerSideProps", "app router"],
+    "typescript": ["TypeScript", ".ts", ".tsx", "interface", "type"],
+    "css": ["CSS", "Tailwind", "styled-components", "SCSS"],
+    
+    # Backend
+    "python": ["Python", ".py", "FastAPI", "Django"],
+    "nodejs": ["Node.js", "Express", "npm"],
+    "database": ["SQL", "PostgreSQL", "MongoDB", "Prisma"],
+    
+    # DevOps
+    "docker": ["Docker", "Dockerfile", "docker-compose"],
+    "git": ["Git", "GitHub Actions", "CI/CD"],
+}
+```
+
 ---
 
 ### 5. Dream Analysis (夢→ステップ分解)
@@ -227,6 +313,146 @@ JSON形式で返してください。
 **実装**:
 - 最後のアクティビティからの経過時間を計算
 - ユーザー設定の時給を取得
+
+---
+
+### 7. Stats (統計データ)
+
+#### GET `/api/stats/weekly`
+
+今週のタスク完了数と集中時間を返す。
+
+**Response:**
+```json
+{
+  "data": [
+    { "day": "月", "tasks": 5, "hours": 3.5 },
+    { "day": "火", "tasks": 8, "hours": 5.2 },
+    { "day": "水", "tasks": 3, "hours": 2.1 },
+    { "day": "木", "tasks": 7, "hours": 4.8 },
+    { "day": "金", "tasks": 6, "hours": 4.0 },
+    { "day": "土", "tasks": 2, "hours": 1.5 },
+    { "day": "日", "tasks": 4, "hours": 2.8 }
+  ],
+  "summary": {
+    "totalTasks": 35,
+    "totalHours": 23.9,
+    "streak": 7,
+    "achievementRate": 87
+  }
+}
+```
+
+#### GET `/api/stats/monthly`
+
+月間進捗データを返す。
+
+**Response:**
+```json
+{
+  "data": [
+    { "week": "W1", "completed": 25 },
+    { "week": "W2", "completed": 32 },
+    { "week": "W3", "completed": 28 },
+    { "week": "W4", "completed": 40 }
+  ],
+  "skillDistribution": [
+    { "name": "Frontend", "value": 45 },
+    { "name": "Backend", "value": 25 },
+    { "name": "Design", "value": 15 },
+    { "name": "DevOps", "value": 15 }
+  ]
+}
+```
+
+---
+
+### 8. Calendar (カレンダータスク)
+
+#### GET `/api/calendar/tasks`
+
+指定期間のタスクを日付ごとに返す。
+
+**Query Parameters:**
+- `start`: 開始日 (YYYY-MM-DD)
+- `end`: 終了日 (YYYY-MM-DD)
+
+**Response:**
+```json
+{
+  "2026-01-16": [
+    { "id": 1, "title": "Vision Frontend", "color": "#3ea8ff" },
+    { "id": 2, "title": "ドキュメント作成", "color": "#22c55e" }
+  ],
+  "2026-01-17": [
+    { "id": 3, "title": "スプリント計画", "color": "#ec4899" }
+  ]
+}
+```
+
+---
+
+### 9. Chat (AI チャット)
+
+#### POST `/api/chat`
+
+ユーザーメッセージを受け取り、AIレスポンスを返す。
+
+**Request:**
+```json
+{
+  "message": "今日のタスクを教えて",
+  "context": {
+    "currentPage": "/",
+    "recentTasks": ["task1", "task2"]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "response": "今日のタスクは3件あります：\n1. Vision Frontend の実装\n2. チームMTGの準備\n3. ドキュメント作成",
+  "actions": [
+    { "type": "navigate", "path": "/tasks" },
+    { "type": "startTask", "taskId": 1 }
+  ]
+}
+```
+
+**実装 (Gemini API)**:
+```python
+prompt = f"""
+ユーザーメッセージ: {message}
+コンテキスト: {context}
+
+Vision AI アシスタントとして、適切な応答を生成してください。
+可能であれば、実行可能なアクション (navigate, startTask, etc.) も提案してください。
+"""
+```
+
+---
+
+### 10. Projects (プロジェクト)
+
+#### GET `/api/projects`
+
+プロジェクト一覧を返す。
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Vision Frontend",
+    "description": "自律型ライフOS のフロントエンド開発",
+    "progress": 65,
+    "totalTasks": 24,
+    "completedTasks": 16,
+    "updatedAt": "2時間前"
+  }
+]
+```
 
 ---
 
