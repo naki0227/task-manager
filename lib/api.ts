@@ -54,13 +54,24 @@ class VisionAPIClient {
     }
 
     private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem("vision-token") : null;
+
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
             headers: {
                 "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {}),
                 ...options?.headers,
             },
             ...options,
         });
+
+        if (response.status === 401) {
+            // Handle unauthorized (redirect to login)
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+                window.location.href = '/login';
+            }
+        }
+
 
         if (!response.ok) {
             throw new Error(`API Error: ${response.status} ${response.statusText}`);
