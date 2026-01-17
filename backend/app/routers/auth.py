@@ -3,7 +3,7 @@ OAuth Authentication Router with Account Linking
 GitHub, Google, Slack, Notion, Linear, Todoist, Discord
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from fastapi.responses import RedirectResponse
 import httpx
 from sqlalchemy.orm import Session
