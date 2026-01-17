@@ -23,21 +23,51 @@ Visionは違います。**AIが勝手に準備を終わらせ、あとは実行�
 - **Backend**: Python (FastAPI) - *別リポジトリ*
 - **AI**: Gemini 2.5 Flash API
 
-## 📦 セットアップ
+## 🚀 セットアップ手順
 
+### 1. リポジトリのクローン
 ```bash
-# リポジトリをクローン
-git clone https://github.com/your-org/vision.git
-cd vision
-
-# 依存関係をインストール
-npm install
-
-# 開発サーバーを起動
-npm run dev
+git clone https://github.com/naki0227/task-manager.git
+cd task-manager
 ```
 
-http://localhost:3000 でアプリが起動します。
+### 2. バックエンド (Python) の準備
+```bash
+cd backend
+
+# 仮想環境の作成と有効化
+# Mac / Linux:
+python3 -m venv venv
+source venv/bin/activate
+
+# Windows:
+# python -m venv venv
+# venv\Scripts\activate
+
+# 依存関係のインストール
+pip install -r requirements.txt
+```
+
+### 3. フロントエンド (Node.js) の準備
+```bash
+# 元のディレクトリに戻る
+cd ..
+
+# 依存関係のインストール
+npm install
+```
+
+### 4. 環境変数の設定
+`.env.example` をコピーして `.env` を作成し、必要なAPIキーを入力してください。
+```bash
+cp .env.example .env
+```
+
+### 5. 起動
+```bash
+# 開発サーバーの起動 (Frontend + Backend)
+npm run dev
+```
 
 ## 📁 プロジェクト構成
 
