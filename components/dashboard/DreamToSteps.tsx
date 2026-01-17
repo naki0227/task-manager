@@ -3,13 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Target, ChevronRight, Loader2 } from "lucide-react";
+import { visionAPI, DreamStep } from "@/lib/api";
 
-interface DreamStep {
-    id: number;
-    title: string;
-    duration: string;
-    status: "pending" | "active" | "completed";
-}
+
 
 const MOCK_STEPS: DreamStep[] = [
     { id: 1, title: "プログラミング基礎を固める", duration: "2ヶ月", status: "completed" },
@@ -25,14 +21,19 @@ export function DreamToSteps() {
     const [steps, setSteps] = useState<DreamStep[]>(MOCK_STEPS);
     const [showSteps, setShowSteps] = useState(true);
 
-    const handleAnalyze = () => {
+    const handleAnalyze = async () => {
         setIsAnalyzing(true);
         setShowSteps(false);
-        // Simulate AI analysis
-        setTimeout(() => {
-            setIsAnalyzing(false);
+
+        try {
+            const result = await visionAPI.analyzeDream(dream);
+            setSteps(result);
             setShowSteps(true);
-        }, 2000);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     return (

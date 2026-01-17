@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Send, Bot, User, Sparkles, Loader2 } from "lucide-react";
+import { visionAPI } from "@/lib/api";
 
 interface Message {
     id: number;
@@ -43,28 +44,24 @@ export default function ChatPage() {
         setInput("");
         setIsLoading(true);
 
-        // Simulate AI response (in real implementation, this would call Python backend)
-        setTimeout(() => {
-            const responses: Record<string, string> = {
-                "今日のタスク": "今日のタスクは3件あります：\n\n1. ✅ Vision Frontend の実装\n2. 📅 チームMTGの準備（14:00〜）\n3. 📝 ドキュメント作成\n\nどれから始めますか？",
-                "タスク": "了解しました！新しいタスクを追加します。\n\nタスク名を教えてください。",
-                "集中": "集中モードを開始しますか？\n\n25分の集中セッションを開始します。準備ができたら「開始」と言ってください。",
-                default: "承知しました！他に何かお手伝いできることはありますか？\n\nヒント：「今日のタスク」「スキルを見せて」「統計を表示」などと話しかけてみてください。",
-            };
-
-            const matchedKey = Object.keys(responses).find((key) => userMessage.content.includes(key));
-            const responseContent = responses[matchedKey || "default"];
+        // Call API
+        try {
+            const response = await visionAPI.chatWithAI(input.trim());
 
             const assistantMessage: Message = {
                 id: Date.now(),
                 role: "assistant",
-                content: responseContent,
+                content: response,
                 timestamp: new Date(),
             };
 
             setMessages((prev) => [...prev, assistantMessage]);
+        } catch (e) {
+            console.error(e);
+            // Error fallback
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -102,8 +99,8 @@ export default function ChatPage() {
                         )}
                         <div
                             className={`max-w-[80%] p-4 rounded-2xl ${message.role === "user"
-                                    ? "bg-primary text-white rounded-br-md"
-                                    : "bg-muted rounded-bl-md"
+                                ? "bg-primary text-white rounded-br-md"
+                                : "bg-muted rounded-bl-md"
                                 }`}
                         >
                             <p className="whitespace-pre-wrap text-sm">{message.content}</p>
