@@ -105,35 +105,52 @@ export default function SettingsPage() {
         });
         setTheme(getStoredTheme());
 
-        // Load connected services from localStorage
-        const storedServices = localStorage.getItem("vision-connected-services");
-        if (storedServices) {
-            try {
-                const parsed = JSON.parse(storedServices);
-                setConnectedServices(prev => ({ ...prev, ...parsed }));
-            } catch (e) {
-                console.error("Failed to parse connected services");
-            }
-        }
-
-        // Check URL params for OAuth callback
+        // Check URL params for OAuth callback first
         const params = new URLSearchParams(window.location.search);
         const services = ["github", "google", "slack", "notion", "discord", "linear", "todoist"];
+        let hasCallback = false;
 
         for (const service of services) {
             if (params.get(service) === "connected") {
-                setConnectedServices(prev => {
-                    const updated = { ...prev, [service]: true };
-                    localStorage.setItem("vision-connected-services", JSON.stringify(updated));
-                    return updated;
-                });
+                hasCallback = true;
                 showToast("success", `${OAUTH_CONFIG[service]?.label || service} と連携しました！`);
-
-                // Clean URL
                 window.history.replaceState({}, "", "/settings");
                 break;
             }
         }
+
+        // Fetch real connected status from backend
+        const fetchConnectedServices = async () => {
+            const token = localStorage.getItem("vision-token");
+            if (!token) return;
+
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            try {
+                const res = await fetch(`${API_URL}/api/users/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const newConnected: Record<string, boolean> = {};
+
+                    data.connected_services.forEach((s: string) => {
+                        newConnected[s] = true;
+                        // Special handling for unified Google
+                        if (s === "google") {
+                            newConnected["google"] = true;
+                            newConnected["gmail"] = true;
+                            newConnected["googleTasks"] = true;
+                        }
+                    });
+
+                    setConnectedServices(prev => ({ ...prev, ...newConnected }));
+                }
+            } catch (e) {
+                console.error("Failed to fetch connected services", e);
+            }
+        };
+
+        fetchConnectedServices();
     }, [showToast]);
 
     const handleToggle = (key: string) => {
