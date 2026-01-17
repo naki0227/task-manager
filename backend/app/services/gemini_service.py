@@ -275,7 +275,7 @@ JSONのみを返し、他の説明文は含めないでください。
     # Dream Analysis
     # ========================================
 
-    async def analyze_dream(self, dream: str, target_duration: str = None) -> list:
+    async def analyze_dream(self, dream: str, target_duration: str = None, current_skills: list[str] = None) -> list:
         """
         Analyze a dream/goal and break it down into actionable steps with sub-tasks
         """
@@ -283,8 +283,12 @@ JSONのみを返し、他の説明文は含めないでください。
         if target_duration:
             duration_context = f"\n目標達成期間: {target_duration}\nこの期間内に達成できるよう、ステップを調整してください。"
         
+        skill_context = ""
+        if current_skills and len(current_skills) > 0:
+            skill_context = f"\nユーザーの現在の習得スキル: {', '.join(current_skills)}\nこれらを踏まえ、習得済みのスキルについては基礎学習を省略し、応用や実践的なステップから開始してください。逆に未習得のスキルが必要な場合は、その学習リソースを具体的に提示してください。"
+        
         prompt = f"""
-ユーザーの夢/目標: {dream}{duration_context}
+ユーザーの夢/目標: {dream}{duration_context}{skill_context}
 
 この夢を達成するための具体的なステップを5〜7個に分解してください。
 各ステップには週単位のサブタスクも含め、具体的な学習リソースを推薦してください。
@@ -364,6 +368,91 @@ JSONのみを返し、他の説明文は含めないでください。
                     ]
                 },
             ]
+
+    # ========================================
+    # Skills Analysis
+    # ========================================
+
+    async def analyze_skills_from_commits(self, commits: list) -> dict:
+        """
+        Analyze GitHub commits to infer programming skills
+        
+        Args:
+            commits: List of commit objects with message, files, changes
+        
+        Returns:
+            {
+                "skillUpdates": [{"skillId": "python", "expGain": 10, "reason": "..."}],
+                "newSkillsDetected": ["rust", "go"],
+                "summary": "分析結果のサマリー"
+            }
+        """
+        if not commits:
+            return {
+                "skillUpdates": [],
+                "newSkillsDetected": [],
+                "summary": "コミットが見つかりませんでした"
+            }
+        
+        # Format commits for analysis
+        commit_text = "\n".join([
+            f"- {c.get('message', '')} ({', '.join(c.get('files', [])[:5])})"
+            for c in commits[:30]  # Limit to 30 commits
+        ])
+        
+        prompt = f"""
+以下のGitHubコミット履歴を分析し、ユーザーのプログラミングスキルを推測してください。
+
+コミット履歴:
+{commit_text}
+
+以下を分析してください:
+1. 使用されている言語/フレームワーク
+2. スキルレベル（初心者/中級者/上級者）
+3. 経験値の増加量
+
+以下のJSON形式で返してください:
+{{
+  "skillUpdates": [
+    {{
+      "skillId": "python",
+      "skillName": "Python",
+      "expGain": 15,
+      "reason": "FastAPIを使ったバックエンド開発"
+    }},
+    {{
+      "skillId": "typescript",
+      "skillName": "TypeScript",
+      "expGain": 10,
+      "reason": "React/Next.jsでのフロントエンド開発"
+    }}
+  ],
+  "newSkillsDetected": ["fastapi", "sqlalchemy"],
+  "summary": "Python/TypeScriptをメインに、FastAPIを使ったフルスタック開発を行っています"
+}}
+
+重要:
+- skillIdは小文字英数字（例: python, typescript, react, nextjs）
+- expGainは1-20の範囲（多いほど深い関与）
+- newSkillsDetectedは初めて検出されたスキル
+- summaryは日本語で1-2文
+"""
+        
+        result = await self._generate_json(prompt)
+        
+        # Ensure proper structure
+        if isinstance(result, dict):
+            return {
+                "skillUpdates": result.get("skillUpdates", []),
+                "newSkillsDetected": result.get("newSkillsDetected", []),
+                "summary": result.get("summary", "分析完了")
+            }
+        else:
+            return {
+                "skillUpdates": [],
+                "newSkillsDetected": [],
+                "summary": "分析結果の解析に失敗しました"
+            }
 
 # シングルトンインスタンス
 _gemini_service = None

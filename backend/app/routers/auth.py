@@ -164,7 +164,9 @@ async def github_callback(
         
         # Trigger background sync
         from app.routers.github import sync_github_issues_task
+        from app.routers.skills import initial_skill_scan_task
         background_tasks.add_task(sync_github_issues_task, user.id)
+        background_tasks.add_task(initial_skill_scan_task, user.id)
         
         # Create JWT for frontend
         jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
@@ -601,3 +603,45 @@ async def todoist_login(authorization: str = Header(None), token: str = None, db
 @router.get("/todoist/callback")
 async def todoist_callback(code: str, state: str = ""):
     return RedirectResponse(url=f"{settings.frontend_url}/settings?todoist=connected")
+
+@router.delete("/{provider}")
+async def disconnect_provider(
+    provider: str,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Disconnect an OAuth provider"""
+    # Verify auth
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="認証が必要です")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    # Get user
+    try:
+        from app.routers.users import get_current_user
+        user = get_current_user(authorization, db)
+    except Exception:
+        raise HTTPException(status_code=401, detail="認証に失敗しました")
+    
+    # Find token
+    oauth_token = db.query(OAuthToken).filter(
+        OAuthToken.user_id == user.id,
+        OAuthToken.provider == provider
+    ).first()
+    
+    if not oauth_token:
+        raise HTTPException(status_code=404, detail=f"{provider}との連携は見つかりませんでした")
+    
+    # Delete token
+    db.delete(oauth_token)
+    
+    # If GitHub, also delete skills
+    if provider == "github":
+        # Delete skills associated with this user
+        from app.models import Skill
+        db.query(Skill).filter(Skill.user_id == user.id).delete()
+    
+    db.commit()
+    
+    return {"message": f"{provider}との連携を解除しました"}
