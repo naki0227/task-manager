@@ -271,6 +271,100 @@ JSONのみを返し、他の説明文は含めないでください。
         prompt = f"{system_prompt}\n\nUser: {message}\nAssistant:"
         return await self._generate(prompt)
 
+    # ========================================
+    # Dream Analysis
+    # ========================================
+
+    async def analyze_dream(self, dream: str, target_duration: str = None) -> list:
+        """
+        Analyze a dream/goal and break it down into actionable steps with sub-tasks
+        """
+        duration_context = ""
+        if target_duration:
+            duration_context = f"\n目標達成期間: {target_duration}\nこの期間内に達成できるよう、ステップを調整してください。"
+        
+        prompt = f"""
+ユーザーの夢/目標: {dream}{duration_context}
+
+この夢を達成するための具体的なステップを5〜7個に分解してください。
+各ステップには週単位のサブタスクも含め、具体的な学習リソースを推薦してください。
+
+各ステップには以下を含めてください:
+- id: 連番 (1から開始)
+- title: ステップのタイトル（簡潔に）
+- description: ステップの具体的な説明（1-2文）
+- duration: 推定所要期間（例: "1ヶ月", "2週間"）
+- status: "pending" (固定)
+- subTasks: 週単位の具体的なタスクの配列
+  - week: 週の範囲（例: "Week 1-2"）
+  - task: 具体的なタスク内容（何をどこまでやるか明確に）
+  - freeResource: 無料で使えるおすすめサイト/アプリ/教材（名前とURL）
+  - paidResource: (オプション) 有料だがおすすめのリソース（名前と価格帯）
+
+以下のJSON形式で返してください:
+[
+  {{
+    "id": 1,
+    "title": "プログラミング基礎を固める",
+    "description": "変数、関数、制御構文など基本的なプログラミング概念を習得する",
+    "duration": "2ヶ月",
+    "status": "pending",
+    "subTasks": [
+      {{
+        "week": "Week 1-2",
+        "task": "Pythonの変数と型を理解し、簡単な計算プログラムを書く",
+        "freeResource": "Progate Python基礎編 (https://prog-8.com/)",
+        "paidResource": "Udemy Python講座 (約2,000円セール時)"
+      }},
+      {{
+        "week": "Week 3-4",
+        "task": "if文、for文、while文を使った制御構文をマスター",
+        "freeResource": "paiza ラーニング (https://paiza.jp/works)",
+        "paidResource": null
+      }}
+    ]
+  }},
+  ...
+]
+
+重要:
+- 現実的で達成可能なステップにする
+- 各ステップに2-4個のサブタスクを含める
+- サブタスクは「何を」「どこまで」やるか具体的に書く
+- freeResourceは必ず含める（無料のサイト/アプリ/YouTube等）
+- paidResourceは良質なものがある場合のみ（なければnull）
+- 順序は達成すべき順番で並べる
+- 最初のステップは今すぐ始められるものにする
+"""
+        
+        result = await self._generate_json(prompt)
+        
+        # Ensure we return a list with proper structure
+        if isinstance(result, list):
+            # Ensure each step has subTasks
+            for step in result:
+                if "subTasks" not in step:
+                    step["subTasks"] = []
+                if "description" not in step:
+                    step["description"] = ""
+            return result
+        elif isinstance(result, dict) and "steps" in result:
+            return result["steps"]
+        else:
+            # Fallback
+            return [
+                {
+                    "id": 1, 
+                    "title": "計画を立てる", 
+                    "description": "目標達成のための具体的な計画を策定する",
+                    "duration": "1週間", 
+                    "status": "pending",
+                    "subTasks": [
+                        {"week": "Week 1", "task": "現状分析と目標設定"}
+                    ]
+                },
+            ]
+
 # シングルトンインスタンス
 _gemini_service = None
 

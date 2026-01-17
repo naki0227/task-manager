@@ -38,11 +38,20 @@ export interface SkillNode {
     unlocked: boolean;
 }
 
+export interface SubTask {
+    week: string;
+    task: string;
+    freeResource?: string;
+    paidResource?: string;
+}
+
 export interface DreamStep {
     id: number;
     title: string;
+    description?: string;
     duration: string;
     status: "pending" | "active" | "completed";
+    subTasks?: SubTask[];
 }
 
 // API Client
@@ -168,7 +177,7 @@ class VisionAPIClient {
     }
 
     // Dream to Steps
-    async analyzeDream(dream: string): Promise<DreamStep[]> {
+    async analyzeDream(dream: string, targetDuration?: string): Promise<DreamStep[]> {
         if (useMock('skills')) {
             await new Promise(r => setTimeout(r, 2000));
             return [
@@ -177,9 +186,9 @@ class VisionAPIClient {
                 { id: 3, title: "ポートフォリオ作成", duration: "2週間", status: "pending" },
             ];
         }
-        return this.fetch<DreamStep[]>("/api/skills/analyze", {
+        return this.fetch<DreamStep[]>("/api/dream/analyze", {
             method: "POST",
-            body: JSON.stringify({ dream }),
+            body: JSON.stringify({ dream, targetDuration }),
         });
     }
 
@@ -207,8 +216,8 @@ export const API_CONFIG = {
     useReal: {
         tasks: true,    // ✅ Implemented
         stats: false,   // 🚧 Pending
-        skills: false,  // 🚧 Pending
-        chat: true,    // ✅ Implemented
+        skills: true,   // ✅ Implemented (Dream Analysis)
+        chat: true,     // ✅ Implemented
         user: true,     // ✅ Implemented
     }
 };
