@@ -381,62 +381,143 @@ async def slack_callback(code: str, state: str = "", db: Session = Depends(get_d
 # Other OAuth endpoints (simplified)
 # ===================
 @router.get("/notion")
-async def notion_login():
+async def notion_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
+    # Check if user is already logged in to link account
+    state = ""
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.notion_client_id,
         "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/notion/callback",
         "response_type": "code",
         "owner": "user",
+        "state": state,
     }
     url = f"https://api.notion.com/v1/oauth/authorize?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/notion/callback")
-async def notion_callback(code: str):
+async def notion_callback(code: str, state: str = ""):
     return RedirectResponse(url=f"{settings.frontend_url}/settings?notion=connected")
 
 
 @router.get("/discord")
-async def discord_login():
+async def discord_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
+    # Check if user is already logged in to link account
+    state = ""
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.discord_client_id,
         "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/discord/callback",
         "response_type": "code",
         "scope": "identify guilds messages.read",
+        "state": state,
     }
     url = f"https://discord.com/api/oauth2/authorize?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/discord/callback")
-async def discord_callback(code: str):
+async def discord_callback(code: str, state: str = ""):
     return RedirectResponse(url=f"{settings.frontend_url}/settings?discord=connected")
 
 
 @router.get("/linear")
-async def linear_login():
+async def linear_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
+    state = ""
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.linear_client_id,
         "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/linear/callback",
         "response_type": "code",
         "scope": "read write",
+        "state": state,
     }
     url = f"https://linear.app/oauth/authorize?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/linear/callback")
-async def linear_callback(code: str):
+async def linear_callback(code: str, state: str = ""):
     return RedirectResponse(url=f"{settings.frontend_url}/settings?linear=connected")
 
 
 @router.get("/todoist")
-async def todoist_login():
+async def todoist_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
+    state = "vision"
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.todoist_client_id,
         "scope": "data:read_write",
-        "state": "vision",
+        "state": state,
     }
     url = f"https://todoist.com/oauth/authorize?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
