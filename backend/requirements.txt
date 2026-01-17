@@ -10,3 +10,4 @@ sqlalchemy
 aiosqlite
 google-generativeai>=0.3.0
 slack-sdk>=3.27.0
+google-generativeai==0.8.5

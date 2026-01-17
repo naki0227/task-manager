@@ -1,89 +1,114 @@
 """
-Slack Router
-Slack OAuth認証とメッセージ同期のエンドポイント
+Slack Integration Router
+Slack messages sync and AI task extraction
 """
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import RedirectResponse
-from app.config import get_settings
+from fastapi import APIRouter, HTTPException, Depends, Header, BackgroundTasks
+from sqlalchemy.orm import Session
+from typing import List, Dict, Any
+import logging
+
+from app.database import get_db, SessionLocal
+from app.models import User, OAuthToken, Task
+from app.routers.users import get_current_user
 from app.services.slack_service import SlackService
 from app.services.gemini_service import get_gemini_service
 
 router = APIRouter()
-settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
-@router.get("/auth/slack")
-async def initiate_slack_oauth():
-    """
-    Slack OAuth認証を開始
-    ユーザーをSlack認証ページにリダイレクト
-    """
-    scopes = [
-        "channels:history",    # チャンネルメッセージ読み取り
-        "channels:read",       # チャンネル情報読み取り
-        "users:read"           # ユーザー情報読み取り
-    ]
+async def get_slack_token(user_id: int, db: Session) -> str:
+    """Get user's Slack OAuth token"""
+    token = db.query(OAuthToken).filter(
+        OAuthToken.user_id == user_id,
+        OAuthToken.provider == "slack"
+    ).first()
     
-    scope_string = ",".join(scopes)
-    redirect_uri = "http://localhost:8000/auth/slack/callback"
+    if not token:
+        raise HTTPException(status_code=400, detail="Slack連携が必要です")
     
-    auth_url = (
-        f"https://slack.com/oauth/v2/authorize?"
-        f"client_id={settings.slack_client_id}&"
-        f"scope={scope_string}&"
-        f"redirect_uri={redirect_uri}"
-    )
-    
-    return RedirectResponse(url=auth_url)
+    return token.access_token
 
 
-@router.get("/auth/slack/callback")
-async def slack_callback(code: str):
-    """
-    Slack OAuth認証のコールバック
-    アクセストークンを取得してメッセージを分析
-    """
+async def sync_slack_tasks_task(user_id: int):
+    """Background task for Slack sync"""
+    db = SessionLocal()
     try:
-        # 1. アクセストークンを取得
-        access_token = await SlackService.exchange_code_for_token(code)
+        # 1. Get Token
+        try:
+            access_token = await get_slack_token(user_id, db)
+        except HTTPException:
+            logger.warning(f"Skipping Slack sync for user {user_id}: No token found")
+            return
+
+        # 2. Fetch Messages
+        # Fetch last 24 hours of messages filtered by keywords
+        messages = await SlackService.fetch_recent_messages(access_token, hours=24)
         
-        # TODO: アクセストークンをDBに保存（後で実装）
-        # await save_integration_token(service="slack", token=access_token)
-        
-        # 2. メッセージを取得
-        messages = await SlackService.fetch_recent_messages(
-            access_token=access_token,
-            hours=24
-        )
-        
-        # 3. Gemini AIでタスク抽出
+        if not messages:
+            logger.info(f"No relevant Slack messages found for user {user_id}")
+            return
+
+        # 3. Analyze with Gemini
         gemini = get_gemini_service()
-        tasks = await gemini.extract_tasks_from_slack_messages(messages)
+        extracted_tasks = await gemini.extract_tasks_from_slack_messages(messages)
         
-        # TODO: タスクをDBに保存（後で実装）
-        # for task in tasks:
-        #     await create_prepared_task(**task, source="slack")
+        # 4. Save to DB
+        imported_count = 0
+        for task_data in extracted_tasks:
+            # Check for duplicates based on title and source
+            # (In a real app, we might want a more robust deduplication strategy using message IDs)
+            existing = db.query(Task).filter(
+                Task.user_id == user_id,
+                Task.title == task_data.get("title"),
+                Task.source == "slack"
+            ).first()
+            
+            if not existing:
+                new_task = Task(
+                    user_id=user_id,
+                    title=task_data.get("title", "無題のSlackタスク"),
+                    description=task_data.get("description", "") + "\n\nSource: Slack",
+                    status="ready",
+                    source="slack",
+                    estimated_time=task_data.get("estimatedTime", "30分"),
+                )
+                db.add(new_task)
+                imported_count += 1
         
-        # 4. フロントエンドにリダイレクト
-        return RedirectResponse(
-            url=f"{settings.frontend_url}/settings?slack=connected&tasks={len(tasks)}"
-        )
-        
+        db.commit()
+        logger.info(f"Synced {imported_count} Slack tasks for user {user_id} from {len(messages)} messages")
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error syncing Slack: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
-@router.post("/api/slack/sync")
-async def sync_slack_messages():
-    """
-    Slackメッセージを手動同期
-    （トークンはDB保存後に実装）
-    """
-    # TODO: DBからトークン取得
-    # access_token = await get_integration_token(service="slack")
+@router.post("/slack/sync")
+async def sync_slack_tasks(
+    background_tasks: BackgroundTasks,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Trigger Slack sync manually"""
+    user = get_current_user(authorization, db)
     
-    return {
-        "message": "Not implemented yet - requires database integration",
-        "status": "pending"
-    }
+    # Run in background
+    background_tasks.add_task(sync_slack_tasks_task, user.id)
+    
+    return {"message": "Slack sync started in background"}
+
+
+@router.get("/slack/messages")
+async def get_slack_messages(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to see what messages are fetched"""
+    user = get_current_user(authorization, db)
+    access_token = await get_slack_token(user.id, db)
+    messages = await SlackService.fetch_recent_messages(access_token, hours=24)
+    return messages

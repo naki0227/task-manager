@@ -66,6 +66,8 @@ export default function ChatPage() {
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
+            // @ts-ignore - nativeEvent types related to IME
+            if (e.nativeEvent.isComposing) return;
             e.preventDefault();
             handleSend();
         }
