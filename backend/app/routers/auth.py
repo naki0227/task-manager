@@ -147,15 +147,28 @@ GOOGLE_USER_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
 @router.get("/google")
-async def google_login(authorization: str = Header(None), db: Session = Depends(get_db)):
+async def google_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
     """Redirect to Google OAuth with all scopes"""
     # Check if user is already logged in to link account
     state = ""
+    # Check Header
     if authorization and authorization.startswith("Bearer "):
         try:
             from app.routers.users import get_current_user
             user = get_current_user(authorization, db)
             state = str(user.id)
+        except Exception:
+            pass
+    # Check Query Param (for frontend redirects)
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            # Manual verify because get_current_user expects header
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
         except Exception:
             pass
 
