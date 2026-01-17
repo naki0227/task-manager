@@ -342,17 +342,13 @@ export default function SettingsPage() {
                                         )}
 
                                         {item.toggle && item.toggleKey && (
-
-                                            {
-                                                item.toggle && item.toggleKey && (
-                                                    <button
-                                                        onClick={() => handleToggle(item.toggleKey!)}
-                                                        className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.toggleKey] ? "bg-primary" : "bg-muted"}`}
-                                                    >
-                                                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${toggles[item.toggleKey] ? "left-6" : "left-1"}`} />
-                                                    </button>
-                                                )
-                                            }
+                                            <button
+                                                onClick={() => handleToggle(item.toggleKey!)}
+                                                className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.toggleKey] ? "bg-primary" : "bg-muted"}`}
+                                            >
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${toggles[item.toggleKey] ? "left-6" : "left-1"}`} />
+                                            </button>
+                                        )}
 
                                         {item.theme && (
                                             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
