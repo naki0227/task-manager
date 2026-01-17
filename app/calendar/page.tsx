@@ -3,22 +3,70 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
 
-// Mock tasks
-const MOCK_TASKS: Record<string, { title: string; color: string }[]> = {
-    "2026-01-13": [{ title: "API実装", color: "#3ea8ff" }],
-    "2026-01-14": [{ title: "デザインレビュー", color: "#22c55e" }],
-    "2026-01-15": [{ title: "チームMTG", color: "#f59e0b" }, { title: "コードレビュー", color: "#8b5cf6" }],
-    "2026-01-16": [{ title: "Vision Frontend", color: "#3ea8ff" }, { title: "ドキュメント作成", color: "#22c55e" }],
-    "2026-01-17": [{ title: "スプリント計画", color: "#ec4899" }],
-    "2026-01-20": [{ title: "リリース準備", color: "#f59e0b" }],
+import { visionAPI, PreparedTask } from "@/lib/api";
+import { useEffect } from "react";
+
+// Source colors (Hex)
+const SOURCE_HEX: Record<string, string> = {
+    github: "#8b5cf6",
+    calendar: "#3b82f6",
+    google_tasks: "#0ea5e9",
+    slack: "#22c55e",
+    dream: "#f59e0b",
+    manual: "#6b7280",
 };
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
 
 export default function CalendarPage() {
-    const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 16)); // January 2026
-    const [selectedDate, setSelectedDate] = useState<string | null>("2026-01-16");
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<string | null>(new Date().toISOString().split("T")[0]);
+    const [tasks, setTasks] = useState<PreparedTask[]>([]);
+    const [tasksByDate, setTasksByDate] = useState<Record<string, { title: string; color: string; source: string }[]>>({});
+
+    useEffect(() => {
+        const loadTasks = async () => {
+            try {
+                const data = await visionAPI.getPreparedTasks();
+                setTasks(data);
+
+                // Map tasks to dates
+                const mapping: Record<string, any[]> = {};
+                data.forEach(task => {
+                    let dateStr = "";
+                    // Try to parse estimatedTime as date (from Google Sync)
+                    // estimatedTime might be "2026-01-16T10:00:00Z" or "30分"
+                    // Check if it starts with year-like pattern
+                    if (task.estimatedTime && (task.estimatedTime.startsWith("202") || task.estimatedTime.match(/^\d{4}-\d{2}-\d{2}/))) {
+                        try {
+                            const d = new Date(task.estimatedTime);
+                            // Use local time to avoid UTC shift
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            dateStr = `${year}-${month}-${day}`;
+                        } catch (e) {
+                            // ignore parse error
+                        }
+                    }
+
+                    if (dateStr) {
+                        if (!mapping[dateStr]) mapping[dateStr] = [];
+                        mapping[dateStr].push({
+                            title: task.title,
+                            color: SOURCE_HEX[task.source] || "#6b7280",
+                            source: task.source,
+                        });
+                    }
+                });
+                setTasksByDate(mapping);
+            } catch (e) {
+                console.error("Failed to load tasks", e);
+            }
+        };
+        loadTasks();
+    }, []);
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -39,7 +87,7 @@ export default function CalendarPage() {
     const goToPrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
     const goToNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-    const selectedTasks = selectedDate ? MOCK_TASKS[selectedDate] || [] : [];
+    const selectedTasks = selectedDate ? tasksByDate[selectedDate] || [] : [];
 
     return (
         <div className="max-w-5xl">
@@ -82,9 +130,10 @@ export default function CalendarPage() {
                             if (day === null) return <div key={index} />;
 
                             const dateKey = formatDateKey(day);
-                            const tasks = MOCK_TASKS[dateKey] || [];
+                            const tasks = tasksByDate[dateKey] || [];
                             const isSelected = selectedDate === dateKey;
-                            const isToday = dateKey === "2026-01-16";
+                            const todayStr = new Date().toISOString().split("T")[0];
+                            const isToday = dateKey === todayStr;
 
                             return (
                                 <button

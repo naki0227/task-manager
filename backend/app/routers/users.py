@@ -29,6 +29,7 @@ class UserProfile(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
+    email: Optional[str] = None
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
 
@@ -89,6 +90,12 @@ async def update_my_profile(
     # Update fields if provided
     if request.name is not None:
         user.name = request.name
+    if request.email is not None and request.email != user.email:
+        # Check if email is already taken
+        existing = db.query(User).filter(User.email == request.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="そのメールアドレスは既に使用されています")
+        user.email = request.email
     if request.avatar_url is not None:
         user.avatar_url = request.avatar_url
     if request.bio is not None:

@@ -86,10 +86,23 @@ const OAUTH_CONFIG: Record<string, { icon: React.ComponentType<{ className?: str
     discord: { icon: Hash, color: "from-indigo-500 to-indigo-700", label: "Discord" },
 };
 
+import { useAuth } from "@/components/providers/AuthProvider";
+import { visionAPI } from "@/lib/api";
+
+// ... existing interfaces ...
+
 export default function SettingsPage() {
     const { showToast } = useToast();
+    const { user, updateUser, login } = useAuth();
     const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
     const [toggles, setToggles] = useState<Record<string, boolean>>({});
+
+    // Profile Editing State
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [isEditingEmail, setIsEditingEmail] = useState(false);
+    const [editEmail, setEditEmail] = useState("");
+
     const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({
         github: false, linear: false, google: false, apple: false,
         googleTasks: false, todoist: false, gmail: false,
@@ -107,6 +120,25 @@ export default function SettingsPage() {
 
         // Check URL params for OAuth callback first
         const params = new URLSearchParams(window.location.search);
+
+        // Capture token if present (from login flow)
+        const token = params.get("token");
+        const userEmail = params.get("user");
+
+        if (token) {
+            localStorage.setItem("vision-token", token);
+            if (userEmail) {
+                // If we get simple email, we might need to fetch full user later, 
+                // but for now let's just update the token.
+                // Or create a minimal user object since we don't have id/name in params
+                // Ideally backend should return full user object encoded or we fetch me()
+            }
+            // Force reload to update AuthProvider state if it was a login
+            // But since we are already in the app, maybe just let AuthProvider pick it up on reload?
+            // Actually, for better UX, we should update the context. 
+            // For now, let's just rely on localStorage.
+        }
+
         const services = ["github", "google", "slack", "notion", "discord", "linear", "todoist"];
         let hasCallback = false;
 
@@ -131,6 +163,16 @@ export default function SettingsPage() {
                 });
                 if (res.ok) {
                     const data = await res.json();
+
+                    // Sync user data to AuthContext and localStorage
+                    // This ensures profile updates from OAuth or other sources are reflected
+                    login(token, {
+                        id: data.id,
+                        email: data.email,
+                        name: data.name,
+                        // Add other fields if User interface supports them
+                    });
+
                     const newConnected: Record<string, boolean> = {};
 
                     data.connected_services.forEach((s: string) => {
@@ -158,6 +200,39 @@ export default function SettingsPage() {
         setToggles(prev => ({ ...prev, [key]: newValue }));
         setUserPreferences({ [key]: newValue });
         showToast("success", "設定を保存しました");
+    };
+
+    const handleSaveProfile = async () => {
+        try {
+            await visionAPI.updateProfile({ name: editName });
+            // Update AuthContext explicitly
+            const updatedUser = { ...user!, name: editName };
+            updateUser({ name: editName });
+            console.log("Profile updated locally:", updatedUser);
+
+            setIsEditingProfile(false);
+            showToast("success", "プロフィールを更新しました");
+        } catch (e) {
+            console.error(e);
+            showToast("error", "プロフィールの更新に失敗しました");
+        }
+    };
+
+    const handleSaveEmail = async () => {
+        if (!editEmail) return;
+        try {
+            await visionAPI.updateProfile({ email: editEmail });
+            // Update AuthContext explicitly to force re-render
+            const updatedUser = { ...user!, email: editEmail };
+            updateUser({ email: editEmail });
+            console.log("Email updated locally:", updatedUser);
+
+            setIsEditingEmail(false);
+            showToast("success", "メールアドレスを更新しました");
+        } catch (e) {
+            console.error(e);
+            showToast("error", "メールアドレスの更新に失敗しました");
+        }
     };
 
     const handleThemeChange = (newTheme: "dark" | "light" | "system") => {
@@ -196,8 +271,10 @@ export default function SettingsPage() {
         };
 
         const endpoint = endpointMap[service];
+        const token = localStorage.getItem("vision-token");
+
         if (endpoint && endpoint !== "apple" && endpoint !== "obsidian") {
-            window.location.href = `${API_URL}/auth/${endpoint}`;
+            window.location.href = `${API_URL}/auth/${endpoint}${token ? `?token=${token}` : ''}`;
         } else if (service === "obsidian") {
             showToast("info", "Obsidian はローカル連携です。Vault パスを設定してください。");
         } else {
@@ -224,16 +301,123 @@ export default function SettingsPage() {
                             <div className="card divide-y divide-border">
                                 {section.items.map((item, index) => (
                                     <div key={index} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                                        <div>
-                                            <p className="font-medium">{item.label}</p>
-                                            <p className="text-sm text-muted-foreground">{item.description}</p>
-                                        </div>
+                                        {/* Profile Section Special Handling */}
+                                        {item.label === "プロフィール" ? (
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="font-medium">プロフィール</p>
+                                                    {!isEditingProfile ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditName(user?.name || "");
+                                                                setIsEditingProfile(true);
+                                                            }}
+                                                            className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                        >
+                                                            編集
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setIsEditingProfile(false)}
+                                                                className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                                                            >
+                                                                キャンセル
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSaveProfile}
+                                                                className="px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                                                            >
+                                                                保存
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                        {item.action && (
-                                            <button className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-1">
-                                                {item.action}
-                                                <ExternalLink className="w-3 h-3" />
-                                            </button>
+                                                {!isEditingProfile ? (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold">
+                                                            {user?.name?.[0]?.toUpperCase() || "U"}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium">{user?.name || "User"}</p>
+                                                            <p className="text-sm text-muted-foreground">{user?.email || "No email"}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <label className="text-xs text-muted-foreground block mb-1">名前</label>
+                                                            <input
+                                                                type="text"
+                                                                value={editName}
+                                                                onChange={(e) => setEditName(e.target.value)}
+                                                                className="w-full px-3 py-2 rounded-md bg-muted/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : item.label === "メールアドレス" ? (
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="font-medium">メールアドレス</p>
+                                                    {!isEditingEmail ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditEmail(user?.email || "");
+                                                                setIsEditingEmail(true);
+                                                            }}
+                                                            className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                        >
+                                                            変更
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setIsEditingEmail(false)}
+                                                                className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                                                            >
+                                                                キャンセル
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSaveEmail}
+                                                                className="px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                                                            >
+                                                                保存
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {!isEditingEmail ? (
+                                                    <p className="text-sm text-muted-foreground">{user?.email || "No email"}</p>
+                                                ) : (
+                                                    <div>
+                                                        <label className="text-xs text-muted-foreground block mb-1">新しいメールアドレス</label>
+                                                        <input
+                                                            type="email"
+                                                            value={editEmail}
+                                                            onChange={(e) => setEditEmail(e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-md bg-muted/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <p className="font-medium">{item.label}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
+
+                                                {item.action && (
+                                                    <button className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-1">
+                                                        {item.action}
+                                                        <ExternalLink className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
 
                                         {item.toggle && item.toggleKey && (

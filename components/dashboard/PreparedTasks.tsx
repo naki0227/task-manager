@@ -1,63 +1,13 @@
-"use client";
-
-import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
-
-interface PreparedTask {
-    id: number;
-    title: string;
-    description: string;
-    preparedItems: string[];
-    estimatedTime: string;
-    source: "github" | "calendar" | "slack" | "dream";
-    status: "ready" | "in-progress" | "completed";
-}
-
-const MOCK_TASKS: PreparedTask[] = [
-    {
-        id: 1,
-        title: "Vision Frontend の続き",
-        description: "昨日の作業の続き。APIクライアントの実装",
-        preparedItems: [
-            "📁 /lib/api/ フォルダを作成済み",
-            "📄 client.ts のボイラープレートを生成済み",
-            "📋 関連ドキュメントを要約済み",
-        ],
-        estimatedTime: "45分",
-        source: "github",
-        status: "ready",
-    },
-    {
-        id: 2,
-        title: "チームMTGの準備",
-        description: "14:00からのスプリントレビュー",
-        preparedItems: [
-            "📊 先週のコミットをサマリー化",
-            "📝 アジェンダのドラフトを作成済み",
-        ],
-        estimatedTime: "15分",
-        source: "calendar",
-        status: "ready",
-    },
-    {
-        id: 3,
-        title: "Slackで話題のライブラリ調査",
-        description: "#dev-random で盛り上がっていた React Query v5",
-        preparedItems: [
-            "🔗 公式ドキュメントのリンクを整理",
-            "📄 基本的な使い方のサンプルコードを生成済み",
-        ],
-        estimatedTime: "20分",
-        source: "slack",
-        status: "ready",
-    },
-];
+import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { visionAPI, PreparedTask } from "@/lib/api";
 
 const SOURCE_COLORS = {
     github: "from-purple-500 to-purple-600",
     calendar: "from-blue-500 to-blue-600",
     slack: "from-green-500 to-green-600",
     dream: "from-amber-500 to-orange-500",
+    manual: "from-gray-500 to-gray-600",
 };
 
 const SOURCE_LABELS = {
@@ -65,18 +15,47 @@ const SOURCE_LABELS = {
     calendar: "カレンダー",
     slack: "Slack",
     dream: "夢から逆算",
+    manual: "手動作成",
 };
 
 export function PreparedTasks() {
-    const [tasks, setTasks] = useState(MOCK_TASKS);
+    const [tasks, setTasks] = useState<PreparedTask[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleStart = (taskId: number) => {
-        setTasks(prev =>
-            prev.map(t => t.id === taskId ? { ...t, status: "in-progress" as const } : t)
-        );
+    useEffect(() => {
+        const loadTasks = async () => {
+            try {
+                const data = await visionAPI.getPreparedTasks();
+                setTasks(data);
+            } catch (e) {
+                console.error("Failed to load tasks", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadTasks();
+    }, []);
+
+    const handleStart = async (taskId: number) => {
+        try {
+            await visionAPI.startTask(taskId);
+            setTasks(prev =>
+                prev.map(t => t.id === taskId ? { ...t, status: "in-progress" as const } : t)
+            );
+        } catch (e) {
+            console.error("Failed to start task", e);
+        }
     };
 
     const readyTasks = tasks.filter(t => t.status === "ready");
+
+    if (loading) {
+        return (
+            <div className="flex h-40 items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">

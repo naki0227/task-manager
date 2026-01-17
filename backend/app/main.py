@@ -2,8 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, tasks, skills, stats, login, users, google, slack
-
+from app.routers import auth, tasks, skills, stats, login, users, google, github, slack
 
 settings = get_settings()
 
@@ -35,8 +34,8 @@ app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
 app.include_router(skills.router, prefix="/api", tags=["Skills"])
 app.include_router(stats.router, prefix="/api", tags=["Stats"])
 app.include_router(google.router, prefix="/api", tags=["Google"])
+app.include_router(github.router, prefix="/api", tags=["GitHub"])
 app.include_router(slack.router, tags=["Slack"])
-
 
 
 @app.get("/")

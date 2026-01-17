@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.database import get_db
 from app.models import Task, User
@@ -20,14 +20,15 @@ class TaskResponse(BaseModel):
     id: int
     title: str
     description: str
-    prepared_items: List[str] = []
-    estimated_time: str
+    prepared_items: List[str] = Field([], alias="preparedItems")
+    estimated_time: str = Field(..., alias="estimatedTime")
     source: str
     status: str
     created_at: datetime
     
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # --- Endpoints ---
 

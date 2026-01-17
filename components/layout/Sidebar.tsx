@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { FocusTimer } from "@/components/dashboard/FocusTimer";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { LogOut } from "lucide-react";
 
 const NAV_ITEMS = [
     { label: "ダッシュボード", href: "/", icon: Home },
@@ -34,6 +36,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { user, logout } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [showTimer, setShowTimer] = useState(false);
 
@@ -142,12 +145,19 @@ export function Sidebar() {
                 <div className="p-4 border-t border-border">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                            U
+                            {user?.name?.[0]?.toUpperCase() || "U"}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">User</p>
-                            <p className="text-xs text-muted-foreground">Free Plan</p>
+                            <p className="text-sm font-medium truncate">{user?.name || "User"}</p>
+                            <p className="text-xs text-muted-foreground">{user?.email || "Guest"}</p>
                         </div>
+                        <button
+                            onClick={logout}
+                            title="ログアウト"
+                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                        >
+                            <LogOut className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             </aside>
