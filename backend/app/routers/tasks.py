@@ -2,8 +2,10 @@
 Tasks Router - Placeholder for team implementation
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Depends, Header
+from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
 from pydantic import BaseModel
 
 router = APIRouter()
