@@ -8,3 +8,5 @@ python-jose[cryptography]>=3.3.0
 email-validator
 sqlalchemy
 aiosqlite
+google-generativeai>=0.3.0
+slack-sdk>=3.27.0
