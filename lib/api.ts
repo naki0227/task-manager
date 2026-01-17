@@ -177,7 +177,7 @@ class VisionAPIClient {
                 { id: 3, title: "ポートフォリオ作成", duration: "2週間", status: "pending" },
             ];
         }
-        return this.fetch<DreamStep[]>("/api/skills/analyze", {
+        return this.fetch<DreamStep[]>("/api/dream/analyze", {
             method: "POST",
             body: JSON.stringify({ dream }),
         });

@@ -271,6 +271,51 @@ JSONのみを返し、他の説明文は含めないでください。
         prompt = f"{system_prompt}\n\nUser: {message}\nAssistant:"
         return await self._generate(prompt)
 
+    # ========================================
+    # Dream Analysis
+    # ========================================
+
+    async def analyze_dream(self, dream: str) -> list:
+        """
+        Analyze a dream/goal and break it down into actionable steps
+        """
+        prompt = f"""
+ユーザーの夢/目標: {dream}
+
+この夢を達成するための具体的なステップを5〜7個に分解してください。
+各ステップには以下を含めてください:
+- id: 連番 (1から開始)
+- title: ステップのタイトル（簡潔に）
+- duration: 推定所要期間（例: "1ヶ月", "2週間"）
+- status: "pending" (固定)
+
+以下のJSON形式で返してください:
+[
+  {{"id": 1, "title": "...", "duration": "...", "status": "pending"}},
+  ...
+]
+
+重要:
+- 現実的で達成可能なステップにする
+- 順序は達成すべき順番で並べる
+- 最初のステップは今すぐ始められるものにする
+"""
+        
+        result = await self._generate_json(prompt)
+        
+        # Ensure we return a list
+        if isinstance(result, list):
+            return result
+        elif isinstance(result, dict) and "steps" in result:
+            return result["steps"]
+        else:
+            # Fallback: create a basic structure
+            return [
+                {"id": 1, "title": "計画を立てる", "duration": "1週間", "status": "pending"},
+                {"id": 2, "title": "基礎を学ぶ", "duration": "1ヶ月", "status": "pending"},
+                {"id": 3, "title": "実践する", "duration": "2ヶ月", "status": "pending"},
+            ]
+
 # シングルトンインスタンス
 _gemini_service = None
 

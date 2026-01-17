@@ -72,3 +72,40 @@ async def analyze_skills(request: SkillAnalysisRequest):
         newSkillsDetected=[],
         summary="Not implemented yet - requires Gemini integration",
     )
+
+
+# ========================================
+# Dream Analysis
+# ========================================
+
+class DreamAnalysisRequest(BaseModel):
+    dream: str
+
+
+class DreamStep(BaseModel):
+    id: int
+    title: str
+    duration: str
+    status: str = "pending"
+
+
+@router.post("/dream/analyze", response_model=List[DreamStep])
+async def analyze_dream(request: DreamAnalysisRequest):
+    """
+    Analyze a dream/goal and break it down into actionable steps
+    """
+    from app.services.gemini_service import get_gemini_service
+    
+    service = get_gemini_service()
+    steps = await service.analyze_dream(request.dream)
+    
+    # Ensure proper format
+    return [
+        DreamStep(
+            id=step.get("id", i + 1),
+            title=step.get("title", "ステップ"),
+            duration=step.get("duration", "未定"),
+            status=step.get("status", "pending")
+        )
+        for i, step in enumerate(steps)
+    ]
