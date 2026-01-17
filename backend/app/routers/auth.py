@@ -147,8 +147,18 @@ GOOGLE_USER_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
 @router.get("/google")
-async def google_login():
+async def google_login(authorization: str = Header(None), db: Session = Depends(get_db)):
     """Redirect to Google OAuth with all scopes"""
+    # Check if user is already logged in to link account
+    state = ""
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.google_client_id,
         "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/google/callback",
@@ -163,13 +173,14 @@ async def google_login():
         ]),
         "access_type": "offline",
         "prompt": "consent",
+        "state": state,
     }
     url = f"{GOOGLE_AUTHORIZE_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/google/callback")
-async def google_callback(code: str, db: Session = Depends(get_db)):
+async def google_callback(code: str, state: str = "", db: Session = Depends(get_db)):
     """Handle Google OAuth callback with account linking"""
     async with httpx.AsyncClient() as client:
         # Exchange code for token
@@ -202,14 +213,21 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         if not email:
             raise HTTPException(status_code=400, detail="メールアドレスが取得できませんでした")
         
-        # Get or create user by email (account linking!)
-        user = await get_or_create_user_by_email(
-            email=email,
-            name=user_data.get("name", ""),
-            db=db
-        )
+        user = None
+        # 1. Try to link to existing user from state
+        if state and state.isdigit():
+            user_id = int(state)
+            user = db.query(User).filter(User.id == user_id).first()
+            
+        # 2. If no state or user not found, find/create by email
+        if not user:
+            user = await get_or_create_user_by_email(
+                email=email,
+                name=user_data.get("name", ""),
+                db=db
+            )
         
-        # Save OAuth token
+        # Save OAuth token (Link account)
         await save_oauth_token(user.id, "google", access_token, refresh_token, db)
         
         # Create JWT for frontend
@@ -218,6 +236,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         return RedirectResponse(
             url=f"{settings.frontend_url}/settings?google=connected&token={jwt_token}&user={user.email}"
         )
+
 
 
 # ===================
