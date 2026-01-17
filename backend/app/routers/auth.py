@@ -343,7 +343,12 @@ async def slack_login(authorization: str = Header(None), token: str = None, db: 
 
 
 @router.get("/slack/callback")
-async def slack_callback(code: str, state: str = "", db: Session = Depends(get_db)):
+async def slack_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "", 
+    db: Session = Depends(get_db)
+):
     """Handle Slack OAuth callback"""
     async with httpx.AsyncClient() as client:
         token_response = await client.post(
@@ -393,6 +398,11 @@ async def slack_callback(code: str, state: str = "", db: Session = Depends(get_d
         
         if user:
             await save_oauth_token(user.id, "slack", access_token, db=db)
+            
+            # Trigger background sync
+            from app.routers.slack import sync_slack_tasks_task
+            background_tasks.add_task(sync_slack_tasks_task, user.id)
+            
             jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
             return RedirectResponse(url=f"{settings.frontend_url}/settings?slack=connected&token={jwt_token}&user={user.email}")
             
@@ -511,8 +521,51 @@ async def linear_login(authorization: str = Header(None), token: str = None, db:
 
 
 @router.get("/linear/callback")
-async def linear_callback(code: str, state: str = ""):
-    return RedirectResponse(url=f"{settings.frontend_url}/settings?linear=connected")
+async def linear_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "", 
+    db: Session = Depends(get_db)
+):
+    """Handle Linear OAuth callback"""
+    try:
+        from app.services.linear_service import LinearService
+        
+        # Exchange code
+        access_token = await LinearService.exchange_code_for_token(code)
+        
+        # Get User Info
+        viewer_data = await LinearService.fetch_viewer_info(access_token)
+        viewer = viewer_data.get("viewer", {})
+        email = viewer.get("email")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Linear email not found")
+            
+        user = None
+        if state and state.isdigit():
+            user_id = int(state)
+            user = db.query(User).filter(User.id == user_id).first()
+            
+        if not user:
+             user = await get_or_create_user_by_email(email, viewer.get("name", "Linear User"), db)
+        
+        # Save Token
+        await save_oauth_token(user.id, "linear", access_token, db=db)
+        
+        # Trigger Sync
+        from app.routers.linear import sync_linear_tasks_task
+        background_tasks.add_task(sync_linear_tasks_task, user.id)
+        
+        # JWT
+        jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/settings?linear=connected&token={jwt_token}&user={user.email}"
+        )
+        
+    except Exception as e:
+        logger.error(f"Linear callback error: {e}")
+        return RedirectResponse(f"{settings.frontend_url}/settings?status=error&message={str(e)}")
 
 
 @router.get("/todoist")

@@ -154,11 +154,17 @@ class VisionAPIClient {
             return "承知しました。他に何かお手伝いできることはありますか？";
         }
 
-        const res = await this.fetch<{ response: string }>("/api/chat", {
-            method: "POST",
-            body: JSON.stringify({ message }),
-        });
-        return res.response;
+        try {
+            const res = await this.fetch<{ response: string }>("/api/chat", {
+                method: "POST",
+                body: JSON.stringify({ message }),
+            });
+            return res.response;
+        } catch (error) {
+            console.error("Chat Error:", error);
+            // Fallback
+            return "すみません、エラーが発生しました。もう一度お試しください。";
+        }
     }
 
     // Dream to Steps
@@ -202,7 +208,7 @@ export const API_CONFIG = {
         tasks: true,    // ✅ Implemented
         stats: false,   // 🚧 Pending
         skills: false,  // 🚧 Pending
-        chat: false,    // 🚧 Pending
+        chat: true,    // ✅ Implemented
         user: true,     // ✅ Implemented
     }
 };

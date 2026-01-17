@@ -253,6 +253,24 @@ JSONのみを返し、他の説明文は含めないでください。
     #     return await self._generate_json(prompt)
 
 
+    # ========================================
+    # Chat Logic
+    # ========================================
+
+    async def chat(self, message: str) -> str:
+        """
+        Chat with Vision AI Assistant
+        """
+        system_prompt = """
+あなたは自律型ライフOS「Vision」のAIアシスタントです。
+ユーザーのタスク管理、スケジュール調整、モチベーション維持をサポートします。
+親しみやすく、かつ効率的な口調で話してください。
+現在はまだチャット履歴を記憶していないため、文脈に応じた回答ができない場合がありますが、
+単発の質問や依頼には全力で答えてください。
+"""
+        prompt = f"{system_prompt}\n\nUser: {message}\nAssistant:"
+        return await self._generate(prompt)
+
 # シングルトンインスタンス
 _gemini_service = None
 
