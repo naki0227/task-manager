@@ -88,3 +88,18 @@ class Snapshot(Base):
     windows = Column(Text, default="[]")  # JSON array
     notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FocusSession(Base):
+    __tablename__ = "focus_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    duration_minutes = Column(Integer, nullable=False)  # Duration in minutes
+    completed_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    user = relationship("User", back_populates="focus_sessions")
+
+# Update User relationship
+User.focus_sessions = relationship("FocusSession", back_populates="user")

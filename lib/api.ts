@@ -24,8 +24,13 @@ export interface AIActivity {
 export interface ContextSnapshot {
     id: number;
     name: string;
-    timestamp: string;
-    windows: { type: "code" | "browser" | "docs"; name: string }[];
+    created_at: string;
+    windows: {
+        type: "code" | "browser" | "docs";
+        name: string;
+        urls?: string[];
+        path?: string;
+    }[];
     notes: string;
 }
 
@@ -106,6 +111,20 @@ class VisionAPIClient {
         return this.fetch(`/api/prepared-tasks/${taskId}/complete`, { method: "POST" });
     }
 
+    async deleteTask(taskId: number): Promise<void> {
+        return this.fetch(`/prepared-tasks/${taskId}`, {
+            method: "DELETE",
+        });
+    }
+
+    // System / Quick Launch
+    async launchAction(actionId: string): Promise<void> {
+        return this.fetch("/api/system/launch", {
+            method: "POST",
+            body: JSON.stringify({ action_id: actionId }),
+        });
+    }
+
     // AI Activity
     async getAIActivities(): Promise<AIActivity[]> {
         if (useMock('chat')) return [];
@@ -123,11 +142,11 @@ class VisionAPIClient {
         return this.fetch(`/api/snapshots/${snapshotId}/resume`, { method: "POST" });
     }
 
-    async createSnapshot(name: string): Promise<ContextSnapshot> {
+    async createSnapshot(name: string, notes: string = ""): Promise<ContextSnapshot> {
         if (useMock('tasks')) throw new Error("Mock not implemented");
         return this.fetch<ContextSnapshot>("/api/snapshots", {
             method: "POST",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, notes }),
         });
     }
 
@@ -215,7 +234,7 @@ export const visionAPI = new VisionAPIClient();
 export const API_CONFIG = {
     useReal: {
         tasks: true,    // ✅ Implemented
-        stats: false,   // 🚧 Pending
+        stats: true,    // ✅ Implemented
         skills: true,   // ✅ Implemented (Dream Analysis)
         chat: true,     // ✅ Implemented
         user: true,     // ✅ Implemented

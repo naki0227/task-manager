@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart } from "recharts";
 import { TrendingUp, Calendar, Target, Flame, Clock, CheckCircle, Loader2 } from "lucide-react";
 import { visionAPI } from "@/lib/api";
 
@@ -26,8 +26,8 @@ export default function StatsPage() {
                     visionAPI.getMonthlyProgress(),
                     visionAPI.getStatsSummary()
                 ]);
-                setWeeklyData(weekly);
-                setMonthlyProgress(monthly);
+                setWeeklyData(Array.isArray(weekly) ? weekly : (weekly as any).data);
+                setMonthlyProgress(Array.isArray(monthly) ? monthly : (monthly as any).data);
 
                 // Add icons to summary
                 const summaryWithIcons = summary.map((item: any, index: number) => ({
@@ -83,23 +83,25 @@ export default function StatsPage() {
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Weekly Tasks */}
+                {/* Weekly Activity */}
                 <div className="card">
                     <h3 className="font-semibold mb-4 flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-primary" />
-                        今週のタスク完了数
+                        今週のアクティビティ
                     </h3>
-                    <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={weeklyData}>
+                    <ResponsiveContainer width="100%" height={240}>
+                        <ComposedChart data={weeklyData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                             <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} />
-                            <YAxis stroke="#94a3b8" fontSize={12} />
+                            <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} />
+                            <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" fontSize={12} />
                             <Tooltip
                                 contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "8px" }}
                                 labelStyle={{ color: "#f8fafc" }}
                             />
-                            <Bar dataKey="tasks" fill="#3ea8ff" radius={[4, 4, 0, 0]} />
-                        </BarChart>
+                            <Bar yAxisId="left" dataKey="tasks" name="完了タスク" fill="#3ea8ff" radius={[4, 4, 0, 0]} barSize={20} />
+                            <Line yAxisId="right" type="monotone" dataKey="hours" name="集中時間(h)" stroke="#f59e0b" strokeWidth={2} dot={{ fill: "#f59e0b" }} />
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </div>
 

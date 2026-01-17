@@ -1,4 +1,4 @@
-import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2 } from "lucide-react";
+import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { visionAPI, PreparedTask } from "@/lib/api";
 
@@ -44,6 +44,16 @@ export function PreparedTasks() {
             );
         } catch (e) {
             console.error("Failed to start task", e);
+        }
+    };
+
+    const handleDelete = async (taskId: number) => {
+        if (!confirm("このタスクを削除しますか？")) return;
+        try {
+            await visionAPI.deleteTask(taskId);
+            setTasks(prev => prev.filter(t => t.id !== taskId));
+        } catch (e) {
+            console.error("Failed to delete task", e);
         }
     };
 
@@ -99,13 +109,22 @@ export function PreparedTasks() {
 
                                     {/* Action Button */}
                                     {task.status === "ready" && (
-                                        <button
-                                            onClick={() => handleStart(task.id)}
-                                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity shrink-0"
-                                        >
-                                            <Play className="w-4 h-4" />
-                                            始める
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleStart(task.id)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity shrink-0"
+                                            >
+                                                <Play className="w-4 h-4" />
+                                                始める
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(task.id)}
+                                                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                                title="削除"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     )}
                                     {task.status === "in-progress" && (
                                         <span className="flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg font-medium shrink-0">

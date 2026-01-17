@@ -94,3 +94,21 @@ async def complete_task(
     # TODO: Calculate Exp gain here
     
     return {"status": "success", "task_id": task.id}
+
+
+@router.delete("/prepared-tasks/{task_id}")
+async def delete_task(
+    task_id: int,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Delete a task"""
+    user = get_current_user(authorization, db)
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    db.delete(task)
+    db.commit()
+    return {"status": "success"}

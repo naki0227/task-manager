@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX } from "lucide-react";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 type TimerMode = "focus" | "break";
 
@@ -10,11 +11,28 @@ const FOCUS_TIME = 25 * 60; // 25 minutes
 const BREAK_TIME = 5 * 60; // 5 minutes
 
 export function FocusTimer() {
+    const { token } = useAuth();
     const [mode, setMode] = useState<TimerMode>("focus");
     const [timeLeft, setTimeLeft] = useState(FOCUS_TIME);
     const [isRunning, setIsRunning] = useState(false);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [sessions, setSessions] = useState(0);
+
+    const recordSession = async () => {
+        if (!token) return;
+        try {
+            await fetch("http://localhost:8000/api/stats/focus", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ durationMinutes: 25 })
+            });
+        } catch (e) {
+            console.error("Failed to record session", e);
+        }
+    };
 
     // Timer logic
     useEffect(() => {
@@ -32,6 +50,7 @@ export function FocusTimer() {
 
                     if (mode === "focus") {
                         setSessions((s) => s + 1);
+                        recordSession(); // Record the session
                         setMode("break");
                         return BREAK_TIME;
                     } else {
@@ -44,7 +63,7 @@ export function FocusTimer() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isRunning, mode, soundEnabled]);
+    }, [isRunning, mode, soundEnabled, token]);
 
     const handleReset = useCallback(() => {
         setIsRunning(false);
@@ -120,8 +139,8 @@ export function FocusTimer() {
                 <button
                     onClick={() => setIsRunning(!isRunning)}
                     className={`p-4 rounded-full transition-colors ${isRunning
-                            ? "bg-destructive text-white"
-                            : "bg-primary text-white"
+                        ? "bg-destructive text-white"
+                        : "bg-primary text-white"
                         }`}
                 >
                     {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}

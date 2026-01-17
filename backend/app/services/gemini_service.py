@@ -20,6 +20,9 @@ import json
 import google.generativeai as genai
 from typing import List, Dict
 from app.config import get_settings
+from sqlalchemy.orm import Session
+from app.services.tools import AVAILABLE_TOOLS, TOOL_FUNCTIONS
+import google.generativeai.protos as protos
 
 
 class GeminiService:
@@ -257,19 +260,107 @@ JSONのみを返し、他の説明文は含めないでください。
     # Chat Logic
     # ========================================
 
-    async def chat(self, message: str) -> str:
+    # ========================================
+    # Chat Logic
+    # ========================================
+    async def chat(self, message: str, user_id: int = None, db: Session = None) -> str:
         """
-        Chat with Vision AI Assistant
+        Chat with Vision AI Assistant with Function Calling support
         """
         system_prompt = """
-あなたは自律型ライフOS「Vision」のAIアシスタントです。
-ユーザーのタスク管理、スケジュール調整、モチベーション維持をサポートします。
+あなたは自律型ライフOS「DreamCatcher」のAIアシスタントです。
+ユーザーのタスク管理、スケジュール調整、スキル習得をサポートします。
+利用可能なツール（関数）がある場合は、適切に使用してユーザーの要望に応えてください。
+ツールを使用した場合は、その結果を踏まえて最終的な回答をしてください。
 親しみやすく、かつ効率的な口調で話してください。
-現在はまだチャット履歴を記憶していないため、文脈に応じた回答ができない場合がありますが、
-単発の質問や依頼には全力で答えてください。
 """
-        prompt = f"{system_prompt}\n\nUser: {message}\nAssistant:"
-        return await self._generate(prompt)
+        
+        # Simple loop for function calling (max 3 turns to prevent infinite loops)
+        messages = [
+            {"role": "user", "parts": [system_prompt + "\n\n" + message]}
+        ]
+        
+        try:
+            # First turn: User -> Model
+            response = self.model.generate_content(
+                messages,
+                tools=AVAILABLE_TOOLS
+            )
+            
+            # Helper to check for function call
+            def get_function_call(response):
+                if not response.candidates: return None
+                for part in response.candidates[0].content.parts:
+                    if part.function_call:
+                        return part.function_call
+                return None
+
+            function_call = get_function_call(response)
+            
+            # Loop if function call
+            turn_count = 0
+            while function_call and turn_count < 3:
+                turn_count += 1
+                func_name = function_call.name
+                func_args = dict(function_call.args)
+                
+                print(f"Executing tool: {func_name} with args: {func_args}")
+                
+                # Execute tool
+                result = {"error": "Function not found"}
+                if func_name in TOOL_FUNCTIONS:
+                    func = TOOL_FUNCTIONS[func_name]
+                    # Inject dependencies if supported
+                    try:
+                        import inspect
+                        sig = inspect.signature(func)
+                        kwargs = {}
+                        for k, v in func_args.items():
+                            kwargs[k] = v
+                        
+                        # Inject special args if present in signature
+                        if "user_id" in sig.parameters:
+                            kwargs["user_id"] = user_id
+                        if "db" in sig.parameters:
+                            kwargs["db"] = db
+                            
+                        result = await func(**kwargs)
+                    except Exception as e:
+                        print(f"Tool execution error: {e}")
+                        result = {"error": str(e)}
+                
+                # Send result back to model
+                # We need to reconstruct history for the stateless call
+                # But generate_content accepts a list of messages (history)
+                
+                # Add Model's Function Call to history
+                messages.append(response.candidates[0].content)
+                
+                # Add Function Response to history
+                messages.append({
+                    "role": "function",
+                    "parts": [
+                        protos.Part(
+                            function_response=protos.FunctionResponse(
+                                name=func_name,
+                                response={"result": result}
+                            )
+                        )
+                    ]
+                })
+                
+                # Generate next response
+                response = self.model.generate_content(
+                    messages,
+                    tools=AVAILABLE_TOOLS
+                )
+                function_call = get_function_call(response)
+                
+            return response.text
+            
+        except Exception as e:
+            print(f"Chat Error details: {e}")
+            raise e
 
     # ========================================
     # Dream Analysis
