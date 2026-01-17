@@ -245,10 +245,42 @@ export default function SettingsPage() {
         const config = OAUTH_CONFIG[service];
         if (!config) return;
 
-        // If already connected, disconnect (mock for now)
+        // If already connected, disconnect
         if (connectedServices[service]) {
-            setConnectedServices(prev => ({ ...prev, [service]: false }));
-            showToast("info", `${config.label} との連携を解除しました`);
+            const token = localStorage.getItem("vision-token");
+            if (!token) return;
+
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+            // Map service names to backend providers
+            const providerMap: Record<string, string> = {
+                github: "github",
+                linear: "linear",
+                google: "google",
+                googleTasks: "google",
+                gmail: "google",
+                slack: "slack",
+                notion: "notion",
+                discord: "discord",
+                todoist: "todoist",
+            };
+
+            const provider = providerMap[service] || service;
+
+            fetch(`${API_URL}/auth/${provider}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(async (res) => {
+                if (res.ok) {
+                    setConnectedServices(prev => ({ ...prev, [service]: false }));
+                    showToast("info", `${config.label} との連携を解除しました`);
+                } else {
+                    showToast("error", "連携解除に失敗しました");
+                }
+            }).catch(() => {
+                showToast("error", "連携解除に失敗しました");
+            });
+
             return;
         }
 
