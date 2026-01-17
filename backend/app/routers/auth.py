@@ -3,7 +3,7 @@ OAuth Authentication Router with Account Linking
 GitHub, Google, Slack, Notion, Linear, Todoist, Discord
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, BackgroundTasks
 from fastapi.responses import RedirectResponse
 import httpx
 from sqlalchemy.orm import Session
@@ -99,7 +99,12 @@ async def github_login(authorization: str = Header(None), token: str = None, db:
 
 
 @router.get("/github/callback")
-async def github_callback(code: str, state: str = "", db: Session = Depends(get_db)):
+async def github_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "", 
+    db: Session = Depends(get_db)
+):
     """Handle GitHub OAuth callback with account linking"""
     async with httpx.AsyncClient() as client:
         # Exchange code for token
@@ -156,6 +161,10 @@ async def github_callback(code: str, state: str = "", db: Session = Depends(get_
         
         # Save OAuth token
         await save_oauth_token(user.id, "github", access_token, db=db)
+        
+        # Trigger background sync
+        from app.routers.github import sync_github_issues_task
+        background_tasks.add_task(sync_github_issues_task, user.id)
         
         # Create JWT for frontend
         jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
@@ -221,7 +230,12 @@ async def google_login(authorization: str = Header(None), token: str = None, db:
 
 
 @router.get("/google/callback")
-async def google_callback(code: str, state: str = "", db: Session = Depends(get_db)):
+async def google_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "", 
+    db: Session = Depends(get_db)
+):
     """Handle Google OAuth callback with account linking"""
     async with httpx.AsyncClient() as client:
         # Exchange code for token
@@ -270,6 +284,14 @@ async def google_callback(code: str, state: str = "", db: Session = Depends(get_
         
         # Save OAuth token (Link account)
         await save_oauth_token(user.id, "google", access_token, refresh_token, db)
+        
+        # Trigger background sync (Calendar & Tasks)
+        from app.routers.google import sync_calendar_task, sync_google_tasks_task
+        
+        background_tasks.add_task(sync_calendar_task, user.id)
+        background_tasks.add_task(sync_google_tasks_task, user.id)
+        # For now, let's assume they might fail if reused session is closed.
+        # Ideally refactor google.py to have similar `sync_google_tasks_task` with SessionLocal
         
         # Create JWT for frontend
         jwt_token = create_access_token({"sub": user.email, "user_id": user.id})

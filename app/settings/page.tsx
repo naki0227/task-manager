@@ -93,7 +93,7 @@ import { visionAPI } from "@/lib/api";
 
 export default function SettingsPage() {
     const { showToast } = useToast();
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, login } = useAuth();
     const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
     const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
@@ -163,6 +163,16 @@ export default function SettingsPage() {
                 });
                 if (res.ok) {
                     const data = await res.json();
+
+                    // Sync user data to AuthContext and localStorage
+                    // This ensures profile updates from OAuth or other sources are reflected
+                    login(token, {
+                        id: data.id,
+                        email: data.email,
+                        name: data.name,
+                        // Add other fields if User interface supports them
+                    });
+
                     const newConnected: Record<string, boolean> = {};
 
                     data.connected_services.forEach((s: string) => {
