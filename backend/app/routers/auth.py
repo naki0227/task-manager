@@ -66,19 +66,40 @@ GITHUB_EMAILS_URL = "https://api.github.com/user/emails"
 
 
 @router.get("/github")
-async def github_login():
+async def github_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
     """Redirect to GitHub OAuth"""
+    # Check if user is already logged in to link account
+    state = ""
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.github_client_id,
         "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/github/callback",
         "scope": "read:user user:email repo",
+        "state": state,
     }
     url = f"{GITHUB_AUTHORIZE_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/github/callback")
-async def github_callback(code: str, db: Session = Depends(get_db)):
+async def github_callback(code: str, state: str = "", db: Session = Depends(get_db)):
     """Handle GitHub OAuth callback with account linking"""
     async with httpx.AsyncClient() as client:
         # Exchange code for token
@@ -119,12 +140,19 @@ async def github_callback(code: str, db: Session = Depends(get_db)):
         if not primary_email:
             raise HTTPException(status_code=400, detail="メールアドレスが取得できませんでした")
         
-        # Get or create user by email (account linking!)
-        user = await get_or_create_user_by_email(
-            email=primary_email,
-            name=user_data.get("name") or user_data.get("login"),
-            db=db
-        )
+        user = None
+        # 1. Try to link to existing user from state
+        if state and state.isdigit():
+            user_id = int(state)
+            user = db.query(User).filter(User.id == user_id).first()
+
+        # 2. If no state or user not found, find/create by email
+        if not user:
+            user = await get_or_create_user_by_email(
+                email=primary_email,
+                name=user_data.get("name") or user_data.get("login"),
+                db=db
+            )
         
         # Save OAuth token
         await save_oauth_token(user.id, "github", access_token, db=db)
