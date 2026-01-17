@@ -9,48 +9,81 @@ from pydantic import BaseModel
 router = APIRouter()
 
 
-class PreparedTask(BaseModel):
+# --- Schemas ---
+class TaskResponse(BaseModel):
     id: int
     title: str
     description: str
-    preparedItems: List[str]
-    estimatedTime: str
+    prepared_items: List[str] = []
+    estimated_time: str
     source: str
     status: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
+# --- Endpoints ---
 
-# Mock data - to be replaced with database
-MOCK_TASKS = [
-    PreparedTask(
-        id=1,
-        title="Vision Frontend の続き",
-        description="昨日の作業の続き。APIクライアントの実装",
-        preparedItems=["📁 /lib/api/ フォルダを作成済み", "📄 client.ts のボイラープレートを生成済み"],
-        estimatedTime="45分",
-        source="github",
-        status="ready",
-    ),
-]
-
-
-@router.get("/prepared-tasks", response_model=List[PreparedTask])
-async def get_prepared_tasks():
-    """Get all AI-prepared tasks"""
-    # TODO: Fetch from database
-    return MOCK_TASKS
+@router.get("/prepared-tasks", response_model=List[TaskResponse])
+async def get_tasks(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Get all tasks for current user"""
+    user = get_current_user(authorization, db)
+    tasks = db.query(Task).filter(Task.user_id == user.id).all()
+    
+    # Map raw model to response (handling JSON fields if needed)
+    response = []
+    for t in tasks:
+        response.append(TaskResponse(
+            id=t.id,
+            title=t.title,
+            description=t.description or "",
+            prepared_items=[], # TODO: Store as JSON string in DB if needed
+            estimated_time=t.estimated_time or "30分",
+            source=t.source or "manual",
+            status=t.status,
+            created_at=t.created_at
+        ))
+    return response
 
 
 @router.post("/prepared-tasks/{task_id}/start")
-async def start_task(task_id: int):
-    """Start a prepared task"""
-    # TODO: Update task status in database
-    # TODO: Open related files/folders
-    return {"message": f"Task {task_id} started"}
+async def start_task(
+    task_id: int,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Mark task as in-progress"""
+    user = get_current_user(authorization, db)
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.status = "in-progress"
+    db.commit()
+    return {"status": "success", "task_id": task.id}
 
 
 @router.post("/prepared-tasks/{task_id}/complete")
-async def complete_task(task_id: int):
-    """Complete a task"""
-    # TODO: Update task status
-    # TODO: Add skill experience
-    return {"message": f"Task {task_id} completed"}
+async def complete_task(
+    task_id: int,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Mark task as completed"""
+    user = get_current_user(authorization, db)
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.status = "completed"
+    db.commit()
+    
+    # TODO: Calculate Exp gain here
+    
+    return {"status": "success", "task_id": task.id}
