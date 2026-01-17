@@ -8,6 +8,10 @@ from typing import List
 from datetime import datetime
 from pydantic import BaseModel
 
+from app.database import get_db
+from app.models import Task, User
+from app.routers.users import get_current_user
+
 router = APIRouter()
 
 
