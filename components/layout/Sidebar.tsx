@@ -16,7 +16,8 @@ import {
     BarChart3,
     Calendar,
     MessageCircle,
-    Timer
+    Timer,
+    Monitor
 } from "lucide-react";
 import { useState } from "react";
 import { FocusTimer } from "@/components/dashboard/FocusTimer";
@@ -28,7 +29,7 @@ const NAV_ITEMS = [
     { label: "統計", href: "/stats", icon: BarChart3 },
     { label: "カレンダー", href: "/calendar", icon: Calendar },
     { label: "夢の計画", href: "/thinking", icon: Brain },
-    { label: "コンテキスト", href: "/resume", icon: History },
+    { label: "コンテキスト", href: "/snapshots", icon: Monitor },
     { label: "スキル", href: "/skills", icon: Trophy },
     { label: "チャット", href: "/chat", icon: MessageCircle },
     { label: "設定", href: "/settings", icon: Settings },

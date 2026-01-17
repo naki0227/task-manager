@@ -14,8 +14,8 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "Vision - Autonomous Life OS",
-  description: "AIが準備、あとは始めるだけ",
+  title: "DreamCatcher",
+  description: "Catch your dreams, one task at a time.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
