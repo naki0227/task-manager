@@ -15,7 +15,9 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (token: string, user: User) => void;
+    login: (token: string, user: User) => void;
     logout: () => void;
+    updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -68,6 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.location.href = "/login";
     };
 
+    const updateUser = (updates: Partial<User>) => {
+        if (!user) return;
+        const updatedUser = { ...user, ...updates };
+        setUser(updatedUser);
+        localStorage.setItem("vision-user", JSON.stringify(updatedUser));
+    };
+
     // Show loading spinner briefly
     if (isLoading) {
         return (
@@ -84,7 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isLoading,
             isAuthenticated: !!token,
             login,
-            logout
+            login,
+            logout,
+            updateUser
         }}>
             {children}
         </AuthContext.Provider>
