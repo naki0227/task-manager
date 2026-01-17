@@ -107,6 +107,25 @@ export default function SettingsPage() {
 
         // Check URL params for OAuth callback first
         const params = new URLSearchParams(window.location.search);
+
+        // Capture token if present (from login flow)
+        const token = params.get("token");
+        const userEmail = params.get("user");
+
+        if (token) {
+            localStorage.setItem("vision-token", token);
+            if (userEmail) {
+                // If we get simple email, we might need to fetch full user later, 
+                // but for now let's just update the token.
+                // Or create a minimal user object since we don't have id/name in params
+                // Ideally backend should return full user object encoded or we fetch me()
+            }
+            // Force reload to update AuthProvider state if it was a login
+            // But since we are already in the app, maybe just let AuthProvider pick it up on reload?
+            // Actually, for better UX, we should update the context. 
+            // For now, let's just rely on localStorage.
+        }
+
         const services = ["github", "google", "slack", "notion", "discord", "linear", "todoist"];
         let hasCallback = false;
 
