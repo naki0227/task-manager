@@ -71,32 +71,39 @@ class VisionAPIClient {
 
     // Prepared Tasks
     async getPreparedTasks(): Promise<PreparedTask[]> {
+        if (useMock('tasks')) return []; // No mock data for tasks defined in this file currently
         return this.fetch<PreparedTask[]>("/api/prepared-tasks");
     }
 
     async startTask(taskId: number): Promise<void> {
+        if (useMock('tasks')) return;
         return this.fetch(`/api/prepared-tasks/${taskId}/start`, { method: "POST" });
     }
 
     async completeTask(taskId: number): Promise<void> {
+        if (useMock('tasks')) return;
         return this.fetch(`/api/prepared-tasks/${taskId}/complete`, { method: "POST" });
     }
 
     // AI Activity
     async getAIActivities(): Promise<AIActivity[]> {
+        if (useMock('chat')) return [];
         return this.fetch<AIActivity[]>("/api/ai-activities");
     }
 
     // Context Snapshots (Infinite Resume)
     async getSnapshots(): Promise<ContextSnapshot[]> {
+        if (useMock('tasks')) return [];
         return this.fetch<ContextSnapshot[]>("/api/snapshots");
     }
 
     async resumeSnapshot(snapshotId: number): Promise<void> {
+        if (useMock('tasks')) return;
         return this.fetch(`/api/snapshots/${snapshotId}/resume`, { method: "POST" });
     }
 
     async createSnapshot(name: string): Promise<ContextSnapshot> {
+        if (useMock('tasks')) throw new Error("Mock not implemented");
         return this.fetch<ContextSnapshot>("/api/snapshots", {
             method: "POST",
             body: JSON.stringify({ name }),
@@ -105,28 +112,29 @@ class VisionAPIClient {
 
     // Skills
     async getSkills(): Promise<SkillNode[]> {
+        if (useMock('skills')) return [];
         return this.fetch<SkillNode[]>("/api/skills");
     }
 
     // Stats
     async getStatsWeekly(): Promise<any[]> {
-        if (USE_MOCK) return MOCK_WEEKLY_DATA;
+        if (useMock('stats')) return MOCK_WEEKLY_DATA;
         return this.fetch<any[]>("/api/stats/weekly");
     }
 
     async getMonthlyProgress(): Promise<any[]> {
-        if (USE_MOCK) return MOCK_MONTHLY_PROGRESS;
+        if (useMock('stats')) return MOCK_MONTHLY_PROGRESS;
         return this.fetch<any[]>("/api/stats/monthly");
     }
 
     async getStatsSummary(): Promise<any[]> {
-        if (USE_MOCK) return MOCK_STATS_SUMMARY;
+        if (useMock('stats')) return MOCK_STATS_SUMMARY;
         return this.fetch<any[]>("/api/stats/summary");
     }
 
     // Chat
     async chatWithAI(message: string): Promise<string> {
-        if (USE_MOCK) {
+        if (useMock('chat')) {
             // Simple mock response logic
             await new Promise(r => setTimeout(r, 1000));
             if (message.includes("タスク")) return "タスクについてですね。新しいタスクを追加しますか？";
@@ -143,7 +151,7 @@ class VisionAPIClient {
 
     // Dream to Steps
     async analyzeDream(dream: string): Promise<DreamStep[]> {
-        if (USE_MOCK) {
+        if (useMock('skills')) {
             await new Promise(r => setTimeout(r, 2000));
             return [
                 { id: 1, title: "基礎学習", duration: "1ヶ月", status: "pending" },
@@ -159,7 +167,7 @@ class VisionAPIClient {
 
     // Loss Aversion
     async getLossData(): Promise<{ hourlyRate: number; idleMinutes: number }> {
-        if (USE_MOCK) return { hourlyRate: 2500, idleMinutes: 45 };
+        if (useMock('stats')) return { hourlyRate: 2500, idleMinutes: 45 };
         return this.fetch("/api/loss-data");
     }
 }
@@ -168,7 +176,22 @@ class VisionAPIClient {
 export const visionAPI = new VisionAPIClient();
 
 // Configuration
-export const USE_MOCK = true; // Set to false to use real API
+export const API_CONFIG = {
+    useReal: {
+        tasks: true,    // ✅ Implemented
+        stats: false,   // 🚧 Pending
+        skills: false,  // 🚧 Pending
+        chat: false,    // 🚧 Pending
+        user: true,     // ✅ Implemented
+    }
+};
+
+// Deprecated: simplistic toggle
+export const USE_MOCK = false;
+
+// Helper to check if we should use mock for a feature
+const useMock = (feature: keyof typeof API_CONFIG.useReal) => !API_CONFIG.useReal[feature];
+
 
 // Mock Data (to be removed when API is ready)
 const MOCK_WEEKLY_DATA = [
