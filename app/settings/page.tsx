@@ -215,8 +215,10 @@ export default function SettingsPage() {
         };
 
         const endpoint = endpointMap[service];
+        const token = localStorage.getItem("vision-token");
+
         if (endpoint && endpoint !== "apple" && endpoint !== "obsidian") {
-            window.location.href = `${API_URL}/auth/${endpoint}`;
+            window.location.href = `${API_URL}/auth/${endpoint}${token ? `?token=${token}` : ''}`;
         } else if (service === "obsidian") {
             showToast("info", "Obsidian はローカル連携です。Vault パスを設定してください。");
         } else {
