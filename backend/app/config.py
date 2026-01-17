@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     debug: bool = True
 
     class Config:
-        env_file = "../.env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"  # Ignore unknown env vars
 
