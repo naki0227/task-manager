@@ -15,7 +15,7 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (token: string, user: User) => void;
-    login: (token: string, user: User) => void;
+    logout: () => void;
     logout: () => void;
     updateUser: (updates: Partial<User>) => void;
 }
@@ -92,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             token,
             isLoading,
             isAuthenticated: !!token,
-            login,
             login,
             logout,
             updateUser
