@@ -288,19 +288,40 @@ SLACK_TOKEN_URL = "https://slack.com/api/oauth.v2.access"
 
 
 @router.get("/slack")
-async def slack_login():
+async def slack_login(authorization: str = Header(None), token: str = None, db: Session = Depends(get_db)):
     """Redirect to Slack OAuth"""
+    # Check if user is already logged in to link account
+    state = ""
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from app.routers.users import get_current_user
+            user = get_current_user(authorization, db)
+            state = str(user.id)
+        except Exception:
+            pass
+    elif token:
+        try:
+            from app.routers.login import SECRET_KEY, ALGORITHM
+            from jose import jwt
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("user_id")
+            if user_id:
+                state = str(user_id)
+        except Exception:
+            pass
+
     params = {
         "client_id": settings.slack_client_id,
         "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/slack/callback",
-        "scope": "channels:history,channels:read,chat:write,users:read",
+        "scope": "channels:history,channels:read,chat:write,users:read,users:read.email",
+        "state": state,
     }
     url = f"{SLACK_AUTHORIZE_URL}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/slack/callback")
-async def slack_callback(code: str, db: Session = Depends(get_db)):
+async def slack_callback(code: str, state: str = "", db: Session = Depends(get_db)):
     """Handle Slack OAuth callback"""
     async with httpx.AsyncClient() as client:
         token_response = await client.post(
@@ -315,10 +336,44 @@ async def slack_callback(code: str, db: Session = Depends(get_db)):
         
         if not token_data.get("ok"):
             raise HTTPException(status_code=400, detail=token_data.get("error", "OAuth failed"))
+            
+        access_token = token_data["access_token"]
         
-        # Note: Slack doesn't provide email easily, so just save token for current user
-        # This would need the user to be logged in first
+        # Get user info (requires users:read and users:read.email scope)
+        user_response = await client.get(
+            "https://slack.com/api/users.identity",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        user_data = user_response.json()
         
+        # Fallback to test without identity if scope missing, but ideally we need email
+        # If user.identity fails, try users.info with authed_user_id
+        email = None
+        slack_user_id = token_data.get("authed_user", {}).get("id")
+        
+        if not email and slack_user_id:
+             info_res = await client.get(
+                "https://slack.com/api/users.info",
+                params={"user": slack_user_id},
+                headers={"Authorization": f"Bearer {access_token}"}
+             )
+             info_data = info_res.json()
+             if info_data.get("ok"):
+                 email = info_data["user"]["profile"].get("email")
+                 
+        user = None
+        if state and state.isdigit():
+            user_id = int(state)
+            user = db.query(User).filter(User.id == user_id).first()
+            
+        if not user and email:
+             user = await get_or_create_user_by_email(email, "Slack User", db)
+        
+        if user:
+            await save_oauth_token(user.id, "slack", access_token, db=db)
+            jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
+            return RedirectResponse(url=f"{settings.frontend_url}/settings?slack=connected&token={jwt_token}&user={user.email}")
+            
         return RedirectResponse(url=f"{settings.frontend_url}/settings?slack=connected")
 
 
