@@ -195,7 +195,11 @@ export default function SettingsPage() {
     const handleSaveProfile = async () => {
         try {
             await visionAPI.updateProfile({ name: editName });
+            // Update AuthContext explicitly
+            const updatedUser = { ...user!, name: editName };
             updateUser({ name: editName });
+            console.log("Profile updated locally:", updatedUser);
+
             setIsEditingProfile(false);
             showToast("success", "プロフィールを更新しました");
         } catch (e) {
