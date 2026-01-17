@@ -615,7 +615,31 @@ vision-backend/
 └── .env.example
 ```
 
+
 ---
+
+## 🛠 実装・デプロイ手順
+
+1. **ルーターファイルの作成**
+   - `backend/app/routers/` 配下に担当のファイル（例: `tasks.py`）を作成し、APIロジックを実装します。
+
+2. **ルーターの登録 (`main.py`)**
+   - 作成したルーターを `backend/app/main.py` にインポートして登録します。
+
+   ```python
+   # app/main.py
+   from app.routers import tasks, stats, skills  # 作成したモジュールをインポート
+
+   # ...
+   app.include_router(tasks.router, prefix="/api", tags=["tasks"])  # 登録
+   app.include_router(stats.router, prefix="/api", tags=["stats"])
+   app.include_router(skills.router, prefix="/api", tags=["skills"])
+   ```
+
+3. **動作確認**
+   - バックエンドを再起動 (`Ctrl+C` -> `uvicorn ...`)
+   - `http://localhost:8000/docs` (Swagger UI) を開き、新しいエンドポイントが表示されているか確認します。
+
 
 ## 🚀 起動方法
 
