@@ -80,32 +80,55 @@ async def analyze_skills(request: SkillAnalysisRequest):
 
 class DreamAnalysisRequest(BaseModel):
     dream: str
+    targetDuration: Optional[str] = None  # 例: "6ヶ月", "1年"
+
+
+class SubTask(BaseModel):
+    week: str
+    task: str
+    freeResource: Optional[str] = None
+    paidResource: Optional[str] = None
 
 
 class DreamStep(BaseModel):
     id: int
     title: str
+    description: str = ""
     duration: str
     status: str = "pending"
+    subTasks: List[SubTask] = []
 
 
 @router.post("/dream/analyze", response_model=List[DreamStep])
 async def analyze_dream(request: DreamAnalysisRequest):
     """
-    Analyze a dream/goal and break it down into actionable steps
+    Analyze a dream/goal and break it down into actionable steps with sub-tasks
     """
     from app.services.gemini_service import get_gemini_service
     
     service = get_gemini_service()
-    steps = await service.analyze_dream(request.dream)
+    steps = await service.analyze_dream(request.dream, request.targetDuration)
     
     # Ensure proper format
-    return [
-        DreamStep(
+    result = []
+    for i, step in enumerate(steps):
+        sub_tasks = [
+            SubTask(
+                week=st.get("week", ""), 
+                task=st.get("task", ""),
+                freeResource=st.get("freeResource"),
+                paidResource=st.get("paidResource")
+            )
+            for st in step.get("subTasks", [])
+        ]
+        
+        result.append(DreamStep(
             id=step.get("id", i + 1),
             title=step.get("title", "ステップ"),
+            description=step.get("description", ""),
             duration=step.get("duration", "未定"),
-            status=step.get("status", "pending")
-        )
-        for i, step in enumerate(steps)
-    ]
+            status=step.get("status", "pending"),
+            subTasks=sub_tasks
+        ))
+    
+    return result

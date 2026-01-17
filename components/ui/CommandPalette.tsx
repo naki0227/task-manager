@@ -14,7 +14,7 @@ interface SearchResult {
 
 const SEARCH_RESULTS: SearchResult[] = [
     { type: "page", title: "ダッシュボード", href: "/" },
-    { type: "page", title: "思考ノード", href: "/thinking" },
+    { type: "page", title: "夢の計画", href: "/thinking" },
     { type: "page", title: "スキルツリー", href: "/skills" },
     { type: "page", title: "コンテキスト", href: "/resume" },
     { type: "page", title: "設定", href: "/settings" },

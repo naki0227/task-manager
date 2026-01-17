@@ -6,7 +6,7 @@ export const translations = {
     ja: {
         // Navigation
         dashboard: "ダッシュボード",
-        thinking: "思考ノード",
+        thinking: "夢の計画",
         context: "コンテキスト",
         skills: "スキル",
         stats: "統計",
