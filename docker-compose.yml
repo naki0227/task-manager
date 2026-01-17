@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      # Data persistence for SQLite
+      - ./backend/sql_app.db:/app/sql_app.db
+    environment:
+      - DATABASE_URL=sqlite:///./sql_app.db
+      - IS_CLOUD_ENV=false
+      # Pass through API keys if set in shell
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Client-side access (Browser -> Backend)
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend

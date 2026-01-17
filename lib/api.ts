@@ -125,6 +125,10 @@ class VisionAPIClient {
         });
     }
 
+    async getSystemConfig(): Promise<{ is_cloud_env: boolean }> {
+        return this.fetch<{ is_cloud_env: boolean }>("/api/system/config");
+    }
+
     // AI Activity
     async getAIActivities(): Promise<AIActivity[]> {
         if (useMock('chat')) return [];

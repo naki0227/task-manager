@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     port: int = 8000
     debug: bool = True
 
+    
+    # Environment
+    is_cloud_env: bool = False
+
     class Config:
         env_file = "../.env"
         env_file_encoding = "utf-8"

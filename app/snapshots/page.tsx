@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { visionAPI, ContextSnapshot } from "@/lib/api";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Plus, Monitor, Play, Trash2, Chrome, Loader2, Save, Terminal } from "lucide-react";
+import { Plus, Monitor, Play, Trash2, Chrome, Loader2, Save, Terminal, AlertTriangle } from "lucide-react";
 
 export default function SnapshotsPage() {
     const { token } = useAuth();
@@ -11,6 +11,11 @@ export default function SnapshotsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isCapturing, setIsCapturing] = useState(false);
     const [resumingId, setResumingId] = useState<number | null>(null);
+    const [isCloud, setIsCloud] = useState(false);
+
+    useEffect(() => {
+        visionAPI.getSystemConfig().then(c => setIsCloud(c.is_cloud_env)).catch(() => { });
+    }, []);
 
     const formatDate = (dateString: string) => {
         try {
@@ -47,6 +52,8 @@ export default function SnapshotsPage() {
     }, [token]);
 
     const handleCapture = async () => {
+        if (isCloud) return;
+
         const now = new Date();
         const defaultName = `Snapshot ${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
@@ -66,6 +73,8 @@ export default function SnapshotsPage() {
     };
 
     const handleResume = async (id: number) => {
+        if (isCloud) return;
+
         setResumingId(id);
         try {
             await visionAPI.resumeSnapshot(id);
@@ -80,18 +89,6 @@ export default function SnapshotsPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("このスナップショットを削除しますか？")) return;
         try {
-            // Need to implement delete in api.ts properly if not exists or use custom fetch
-            // But api.ts generally lacks explicit deleteSnapshot method in exposed interface?
-            // Actually it wasn't there in previous view. I'll check.
-            // If missing, I'll add it or call fetch manually.
-            // Wait, I didn't add deleteSnapshot to api.ts yet?
-            // I added delete endpoint to backend.
-            // I'll assume for now I can't delete or need to add it.
-            // Let's add delete logic here directly using private fetch trick or add to api.ts later.
-            // For now, let's try to add it to API client dynamically or skip delete.
-            // I'll strictly follow api.ts.
-            // I'll skip delete for now or implement it properly.
-            // Actually I'll create a temp fix.
             await fetch(`/api/snapshots/${id}`, {
                 method: "DELETE",
                 headers: {
@@ -117,13 +114,20 @@ export default function SnapshotsPage() {
                 </div>
                 <button
                     onClick={handleCapture}
-                    disabled={isCapturing}
+                    disabled={isCapturing || isCloud}
                     className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                     {isCapturing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     コンテキストを保存
                 </button>
             </header>
+
+            {isCloud && (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-lg mb-6 text-yellow-600 dark:text-yellow-400 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    <p className="text-sm font-medium">クラウド版では作業環境の保存・復元機能は利用できません。デスクトップ版をご利用ください。</p>
+                </div>
+            )}
 
             {isLoading ? (
                 <div className="flex justify-center py-20">
@@ -171,8 +175,8 @@ export default function SnapshotsPage() {
 
                             <button
                                 onClick={() => handleResume(snap.id)}
-                                disabled={resumingId === snap.id}
-                                className="w-full flex items-center justify-center gap-2 bg-secondary text-secondary-foreground py-2 rounded-lg hover:bg-secondary/80 transition-colors"
+                                disabled={resumingId === snap.id || isCloud}
+                                className="w-full flex items-center justify-center gap-2 bg-secondary text-secondary-foreground py-2 rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50"
                             >
                                 {resumingId === snap.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                                 再開する

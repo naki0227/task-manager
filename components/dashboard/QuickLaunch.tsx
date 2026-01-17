@@ -2,7 +2,7 @@
 
 import { Rocket, Terminal, Code, BookOpen, Briefcase } from "lucide-react";
 import { visionAPI } from "@/lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface QuickLaunchItem {
     id: number;
@@ -50,9 +50,14 @@ const QUICK_LAUNCHES: QuickLaunchItem[] = [
 
 export function QuickLaunch() {
     const [launching, setLaunching] = useState<string | null>(null);
+    const [isCloud, setIsCloud] = useState(false);
+
+    useEffect(() => {
+        visionAPI.getSystemConfig().then(c => setIsCloud(c.is_cloud_env)).catch(() => { });
+    }, []);
 
     const handleLaunch = async (actionId: string) => {
-        if (launching) return;
+        if (launching || isCloud) return;
         setLaunching(actionId);
         try {
             await visionAPI.launchAction(actionId);
@@ -64,7 +69,7 @@ export function QuickLaunch() {
     };
 
     return (
-        <div className="card">
+        <div className="card relative">
             {/* Header */}
             <div className="flex items-center gap-2 mb-4">
                 <Rocket className="w-5 h-5 text-primary" />
@@ -72,7 +77,7 @@ export function QuickLaunch() {
             </div>
 
             {/* Launch Grid */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid grid-cols-2 gap-2 ${isCloud ? 'opacity-50 pointer-events-none' : ''}`}>
                 {QUICK_LAUNCHES.map((item) => {
                     const Icon = item.icon;
                     const isLaunching = launching === item.actionId;
@@ -80,7 +85,7 @@ export function QuickLaunch() {
                         <button
                             key={item.id}
                             onClick={() => handleLaunch(item.actionId)}
-                            disabled={!!launching}
+                            disabled={!!launching || isCloud}
                             className={`p-3 rounded-xl bg-muted hover:bg-muted/70 transition-all text-left group relative overflow-hidden ${isLaunching ? 'scale-95 opacity-80' : ''}`}
                         >
                             {isLaunching && (
@@ -95,6 +100,14 @@ export function QuickLaunch() {
                     );
                 })}
             </div>
+
+            {isCloud && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 pt-8">
+                    <span className="text-xs font-semibold bg-background/90 px-3 py-1.5 rounded-full shadow-sm text-muted-foreground border">
+                        デスクトップ版のみ対応
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

@@ -10,6 +10,7 @@ import os
 from app.database import get_db
 from app.models import Snapshot, User
 from app.routers.users import get_current_user
+from app.config import get_settings
 
 router = APIRouter()
 
@@ -144,6 +145,10 @@ async def resume_snapshot(
     db: Session = Depends(get_db)
 ):
     """Resume a snapshot (Open URLs and Apps)"""
+    settings = get_settings()
+    if settings.is_cloud_env:
+        raise HTTPException(status_code=403, detail="Snapshot resume not supported in cloud environment")
+
     user = get_current_user(authorization, db)
     snapshot = db.query(Snapshot).filter(Snapshot.id == snapshot_id, Snapshot.user_id == user.id).first()
     
