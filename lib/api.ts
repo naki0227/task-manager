@@ -55,6 +55,7 @@ class VisionAPIClient {
 
     private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
         const token = typeof window !== 'undefined' ? localStorage.getItem("vision-token") : null;
+        console.log(`[VisionAPI] Fetching ${endpoint}, Token exists: ${!!token}`);
 
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
             headers: {
