@@ -68,10 +68,9 @@ class VisionAPIClient {
 
         if (response.status === 401) {
             // Handle unauthorized (redirect to login)
-            console.warn("401 Unauthorized detected");
-            // if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-            //      window.location.href = '/login';
-            // }
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+                window.location.href = '/login';
+            }
         }
 
 
