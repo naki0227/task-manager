@@ -182,6 +182,15 @@ class VisionAPIClient {
         if (useMock('stats')) return { hourlyRate: 2500, idleMinutes: 45 };
         return this.fetch("/api/loss-data");
     }
+
+    // User Profile
+    async updateProfile(data: { name?: string; bio?: string; avatar_url?: string; email?: string }): Promise<any> {
+        if (useMock('user')) throw new Error("Mock not implemented for user update");
+        return this.fetch("/api/users/me", {
+            method: "PATCH",
+            body: JSON.stringify(data),
+        });
+    }
 }
 
 // Export singleton instance

@@ -100,6 +100,8 @@ export default function SettingsPage() {
     // Profile Editing State
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editName, setEditName] = useState("");
+    const [isEditingEmail, setIsEditingEmail] = useState(false);
+    const [editEmail, setEditEmail] = useState("");
 
     const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({
         github: false, linear: false, google: false, apple: false,
@@ -199,6 +201,23 @@ export default function SettingsPage() {
         } catch (e) {
             console.error(e);
             showToast("error", "プロフィールの更新に失敗しました");
+        }
+    };
+
+    const handleSaveEmail = async () => {
+        if (!editEmail) return;
+        try {
+            await visionAPI.updateProfile({ email: editEmail });
+            // Update AuthContext explicitly to force re-render
+            const updatedUser = { ...user!, email: editEmail };
+            updateUser({ email: editEmail });
+            console.log("Email updated locally:", updatedUser);
+
+            setIsEditingEmail(false);
+            showToast("success", "メールアドレスを更新しました");
+        } catch (e) {
+            console.error(e);
+            showToast("error", "メールアドレスの更新に失敗しました");
         }
     };
 
@@ -322,6 +341,52 @@ export default function SettingsPage() {
                                                                 className="w-full px-3 py-2 rounded-md bg-muted/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary"
                                                             />
                                                         </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : item.label === "メールアドレス" ? (
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="font-medium">メールアドレス</p>
+                                                    {!isEditingEmail ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditEmail(user?.email || "");
+                                                                setIsEditingEmail(true);
+                                                            }}
+                                                            className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                        >
+                                                            変更
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setIsEditingEmail(false)}
+                                                                className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                                                            >
+                                                                キャンセル
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSaveEmail}
+                                                                className="px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                                                            >
+                                                                保存
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {!isEditingEmail ? (
+                                                    <p className="text-sm text-muted-foreground">{user?.email || "No email"}</p>
+                                                ) : (
+                                                    <div>
+                                                        <label className="text-xs text-muted-foreground block mb-1">新しいメールアドレス</label>
+                                                        <input
+                                                            type="email"
+                                                            value={editEmail}
+                                                            onChange={(e) => setEditEmail(e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-md bg-muted/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
