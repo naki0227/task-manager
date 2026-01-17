@@ -86,10 +86,21 @@ const OAUTH_CONFIG: Record<string, { icon: React.ComponentType<{ className?: str
     discord: { icon: Hash, color: "from-indigo-500 to-indigo-700", label: "Discord" },
 };
 
+import { useAuth } from "@/components/providers/AuthProvider";
+import { visionAPI } from "@/lib/api";
+
+// ... existing interfaces ...
+
 export default function SettingsPage() {
     const { showToast } = useToast();
+    const { user, updateUser } = useAuth();
     const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
     const [toggles, setToggles] = useState<Record<string, boolean>>({});
+
+    // Profile Editing State
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editName, setEditName] = useState("");
+
     const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({
         github: false, linear: false, google: false, apple: false,
         googleTasks: false, todoist: false, gmail: false,
@@ -179,6 +190,18 @@ export default function SettingsPage() {
         showToast("success", "設定を保存しました");
     };
 
+    const handleSaveProfile = async () => {
+        try {
+            await visionAPI.updateProfile({ name: editName });
+            updateUser({ name: editName });
+            setIsEditingProfile(false);
+            showToast("success", "プロフィールを更新しました");
+        } catch (e) {
+            console.error(e);
+            showToast("error", "プロフィールの更新に失敗しました");
+        }
+    };
+
     const handleThemeChange = (newTheme: "dark" | "light" | "system") => {
         setTheme(newTheme);
         setStoredTheme(newTheme);
@@ -245,26 +268,91 @@ export default function SettingsPage() {
                             <div className="card divide-y divide-border">
                                 {section.items.map((item, index) => (
                                     <div key={index} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                                        <div>
-                                            <p className="font-medium">{item.label}</p>
-                                            <p className="text-sm text-muted-foreground">{item.description}</p>
-                                        </div>
+                                        {/* Profile Section Special Handling */}
+                                        {item.label === "プロフィール" ? (
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="font-medium">プロフィール</p>
+                                                    {!isEditingProfile ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditName(user?.name || "");
+                                                                setIsEditingProfile(true);
+                                                            }}
+                                                            className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                        >
+                                                            編集
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setIsEditingProfile(false)}
+                                                                className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                                                            >
+                                                                キャンセル
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSaveProfile}
+                                                                className="px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                                                            >
+                                                                保存
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                        {item.action && (
-                                            <button className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-1">
-                                                {item.action}
-                                                <ExternalLink className="w-3 h-3" />
-                                            </button>
+                                                {!isEditingProfile ? (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold">
+                                                            {user?.name?.[0]?.toUpperCase() || "U"}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium">{user?.name || "User"}</p>
+                                                            <p className="text-sm text-muted-foreground">{user?.email || "No email"}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <label className="text-xs text-muted-foreground block mb-1">名前</label>
+                                                            <input
+                                                                type="text"
+                                                                value={editName}
+                                                                onChange={(e) => setEditName(e.target.value)}
+                                                                className="w-full px-3 py-2 rounded-md bg-muted/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <p className="font-medium">{item.label}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                                </div>
+
+                                                {item.action && (
+                                                    <button className="px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-1">
+                                                        {item.action}
+                                                        <ExternalLink className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
 
                                         {item.toggle && item.toggleKey && (
-                                            <button
-                                                onClick={() => handleToggle(item.toggleKey!)}
-                                                className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.toggleKey] ? "bg-primary" : "bg-muted"}`}
-                                            >
-                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${toggles[item.toggleKey] ? "left-6" : "left-1"}`} />
-                                            </button>
-                                        )}
+
+                                            {
+                                                item.toggle && item.toggleKey && (
+                                                    <button
+                                                        onClick={() => handleToggle(item.toggleKey!)}
+                                                        className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.toggleKey] ? "bg-primary" : "bg-muted"}`}
+                                                    >
+                                                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${toggles[item.toggleKey] ? "left-6" : "left-1"}`} />
+                                                    </button>
+                                                )
+                                            }
 
                                         {item.theme && (
                                             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
