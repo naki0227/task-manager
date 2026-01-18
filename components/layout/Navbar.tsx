@@ -10,7 +10,6 @@ import { Menu, X } from "lucide-react";
 const NAV_ITEMS = [
     { label: "ダッシュボード", href: "/" },
     { label: "思考ノード", href: "/flow" },
-    { label: "機会損失", href: "/loss" },
     { label: "成長記録", href: "/skills" },
 ];
 

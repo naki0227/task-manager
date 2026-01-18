@@ -110,28 +110,36 @@ async def add_task(title: str, description: str = "", estimated_time: str = "30å
     return {"status": "success", "task_id": new_task.id, "message": f"Task '{title}' added."}
 
 async def get_calendar_events(days: int = 1, user_id: int = None, db: Session = None):
-    """Mock calendar events"""
-    # In future, fetch from Google Calendar API using stored tokens
-    # user = db.query(User).filter(User.id == user_id).first()
+    """Fetch real calendar events"""
+    if not user_id or not db:
+        return {"error": "Authentication required. Please log in."}
     
-    today = datetime.now()
-    events = []
+    from app.routers.google import get_google_token, fetch_calendar_events
     
-    # Mock data
-    events.append({
-        "summary": "Team Meeting",
-        "start": (today + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
-        "end": (today + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M")
-    })
-    
-    if days > 1:
-        events.append({
-            "summary": "Project Deadline",
-            "start": (today + timedelta(days=1, hours=10)).strftime("%Y-%m-%d %H:%M"),
-            "end": (today + timedelta(days=1, hours=12)).strftime("%Y-%m-%d %H:%M")
-        })
-
-    return {"events": events}
+    try:
+        # Check if user has token
+        try:
+            token = await get_google_token(user_id, db)
+        except Exception:
+            return {"error": "Google Calendar not connected. Please connect in Settings."}
+            
+        events = await fetch_calendar_events(token, days)
+        
+        if not events:
+            return {"events": [], "message": "No events found."}
+            
+        formatted_events = []
+        for e in events:
+            formatted_events.append({
+                "summary": e.title,
+                "start": e.start,
+                "end": e.end,
+                "description": e.description
+            })
+            
+        return {"events": formatted_events}
+    except Exception as e:
+        return {"error": f"Failed to fetch events: {str(e)}"}
 
 async def get_current_time():
     return {"time": get_current_date()}

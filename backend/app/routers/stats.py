@@ -171,28 +171,72 @@ async def get_monthly_stats(
     authorization: str = Header(None),
     db: Session = Depends(get_db)
 ):
-    """Get monthly statistics (Mock for now or simple aggregation)"""
-    # Just returning mock to keep existing functionality for now,
-    # as monthly view wasn't prioritized in user request
+    """Get monthly statistics (Real data)"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    user = get_current_user(authorization, db)
     
-    # We don't necessarily need user here if just returning mock,
-    # but let's keep it consistent
-    # user = get_current_user(authorization, db) (If we wanted to use user data)
+    # 1. Monthly Tasks (Last 4 weeks)
+    today = datetime.utcnow().date()
+    # Align to Monday? Or just simple 28 days back? Simple is better.
+    start_date = today - timedelta(days=27) 
     
+    data = []
+    
+    # Pre-fetch tasks to minimize queries
+    tasks = db.query(Task).filter(
+        Task.user_id == user.id,
+        Task.status == 'completed',
+        Task.updated_at >= start_date # Approximate
+    ).all()
+    
+    # Group by week
+    for i in range(4):
+        # W1: start -> start+6
+        # W2: start+7 -> start+13 ...
+        w_start = start_date + timedelta(days=i*7)
+        w_end = w_start + timedelta(days=7) # exclusive for next iteration logic, but strictly inclusive for date checks
+        
+        # Count tasks in this week window
+        count = 0
+        for t in tasks:
+            t_date = t.updated_at.date()
+            if w_start <= t_date < w_end:
+                 count += 1
+        
+        data.append(WeekStats(week=f"W{i+1}", completed=count))
+
+    # 2. Skill Distribution (From User Skills)
+    # We use the user's skill levels/exp to show "What skills do you have?"
+    # Ideally this would be "Skills used this month", but we don't track that yet.
+    # So we show "Current Skill Portfolio".
+    from app.models import Skill
+    skills = db.query(Skill).filter(Skill.user_id == user.id).all()
+    
+    skill_dist = []
+    if skills:
+        # Sort by level/exp and take top ones? Or all?
+        # Let's take top 5 by level * 100 + exp
+        sorted_skills = sorted(skills, key=lambda s: s.level * 100 + s.exp, reverse=True)
+        
+        total_val = sum(s.level * 100 + s.exp for s in sorted_skills) or 1
+        
+        for s in sorted_skills[:5]: # Top 5
+            val = s.level * 100 + s.exp
+            # Normalize to some percentage or just use raw?
+            # The frontend charts usually handle raw values.
+            skill_dist.append(SkillDistribution(name=s.name, value=val))
+    
+    if not skill_dist:
+        # Placeholder if no skills
+        skill_dist = [SkillDistribution(name="No Skills Yet", value=1)]
+
     return MonthlyStatsResponse(
-        data=[
-            WeekStats(week="W1", completed=12),
-            WeekStats(week="W2", completed=15),
-            WeekStats(week="W3", completed=8),
-            WeekStats(week="W4", completed=20),
-        ],
-        skillDistribution=[
-            SkillDistribution(name="Frontend", value=40),
-            SkillDistribution(name="Backend", value=30),
-            SkillDistribution(name="Design", value=15),
-            SkillDistribution(name="DevOps", value=15),
-        ],
+        data=data,
+        skillDistribution=skill_dist
     )
+
 
 @router.get("/stats/summary")
 async def get_stats_summary(
@@ -283,17 +327,9 @@ async def get_stats_summary(
         {"label": "達成率", "value": "85%", "change": "-"},
     ]
 
+
 def extract_date_str(d):
     """Helper to handle date/datetime objects safely"""
     if isinstance(d, datetime):
         return d.strftime("%Y-%m-%d")
     return str(d)
-
-
-@router.get("/loss-data")
-async def get_loss_data():
-    """Get opportunity loss data"""
-    return {
-        "hourlyRate": 3000,
-        "idleMinutes": 45,
-    }
