@@ -99,11 +99,14 @@ async def fetch_calendar_events(access_token: str, days: int = 7) -> List[Calend
 async def import_calendar_events(user_id: int, events: List[CalendarEvent], db: Session) -> int:
     """Core logic to save events as tasks"""
     imported = 0
+    # Calendar Import Logic
     for event in events:
+        # Match by Title AND Start Time to distinguish recurring events
         existing = db.query(Task).filter(
             Task.user_id == user_id,
             Task.title == event.title,
-            Task.source == "calendar"
+            Task.source == "calendar",
+            Task.estimated_time == str(event.start)
         ).first()
         
         if not existing:
@@ -119,8 +122,9 @@ async def import_calendar_events(user_id: int, events: List[CalendarEvent], db: 
             imported += 1
         else:
             # Update existing task
-            existing.description = event.description or f"予定: {event.start}"
-            existing.estimated_time = str(event.start)
+            if existing.status != "archived":
+                existing.description = event.description or f"予定: {event.start}"
+                # existing.estimated_time is already matched
             
     return imported
 
@@ -189,21 +193,26 @@ async def fetch_google_tasks_core(access_token: str) -> List[GoogleTask]:
         all_tasks = []
         
         for task_list in lists_data.get("items", []):
-            tasks_response = await client.get(
-                f"{GOOGLE_TASKS_API}/lists/{task_list['id']}/tasks",
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
-            
-            if tasks_response.status_code == 200:
-                tasks_data = tasks_response.json()
-                for item in tasks_data.get("items", []):
-                    all_tasks.append(GoogleTask(
-                        id=item.get("id", ""),
-                        title=item.get("title", ""),
-                        notes=item.get("notes", ""),
-                        due=item.get("due"),
-                        status=item.get("status", "needsAction"),
-                    ))
+            try:
+                tasks_response = await client.get(
+                    f"{GOOGLE_TASKS_API}/lists/{task_list['id']}/tasks",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+                
+                if tasks_response.status_code == 200:
+                    tasks_data = tasks_response.json()
+                    for item in tasks_data.get("items", []):
+                        all_tasks.append(GoogleTask(
+                            id=item.get("id", ""),
+                            title=item.get("title", ""),
+                            notes=item.get("notes", ""),
+                            due=item.get("due"),
+                            status=item.get("status", "needsAction"),
+                        ))
+            except Exception as e:
+                logger.error(f"Error fetching tasks for list {task_list.get('id')}: {e}")
+                continue
+                
         return all_tasks
 
 
@@ -232,9 +241,11 @@ async def import_google_tasks(user_id: int, tasks: List[GoogleTask], db: Session
             imported += 1
         else:
             # Update existing task
-            existing.description = gtask.notes or ""
-            existing.status = "ready" if gtask.status == "needsAction" else "completed"
-            existing.estimated_time = str(gtask.due) if gtask.due else ""
+            if existing.status != "archived":  # Don't resurrect archived tasks
+                existing.description = gtask.notes or ""
+                # Only update status if mapped status changed (and not archived)
+                existing.status = "ready" if gtask.status == "needsAction" else "completed"
+                existing.estimated_time = str(gtask.due) if gtask.due else ""
             
     return imported
 
