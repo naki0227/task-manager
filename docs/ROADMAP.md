@@ -39,7 +39,9 @@ WebアプリをElectronまたはTauriでラップし、ローカルAPIへのア�
 
 ---
 
-## 🔄 5. Offline-First Architecture
-**Issue**: サーバー通信が必要なため、完全オフラインでのタスク操作に弱い。
+## 🔄 5. Offline-First & Privacy Architecture
+**Issue**: サーバー通信が必要なため、完全オフラインでの利用が不可。また、セキュリティ意識の高いユーザー（企業利用など）はクラウドへのデータ送信を懸念する。
 **Solution**:
-- **Local-First Sync**: RxDBやElectricSQLを導入し、クライアント側でDBを持ち、オンライン時に自動同期する仕組みへ移行。
+- **Local-First Sync**: RxDBやElectricSQLを導入し、データの実体をクライアント（ローカル）に持つ。
+- **On-Device AI**: Gemini Nano や Llama などのローカルLLMを活用し、プライバシーデータを外部送信せずに「分析」や「要約」を実行するオプションを提供する。
+
