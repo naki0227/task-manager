@@ -216,10 +216,6 @@ class VisionAPIClient {
     }
 
     // Loss Aversion
-    async getLossData(): Promise<{ hourlyRate: number; idleMinutes: number }> {
-        if (useMock('stats')) return { hourlyRate: 2500, idleMinutes: 45 };
-        return this.fetch("/api/loss-data");
-    }
 
     // User Profile
     async updateProfile(data: { name?: string; bio?: string; avatar_url?: string; email?: string }): Promise<any> {
@@ -283,7 +279,6 @@ export const API_KEYS = {
     aiActivities: ["ai-activities"] as const,
     snapshots: ["snapshots"] as const,
     skills: ["skills"] as const,
-    lossData: ["loss-data"] as const,
     statsWeekly: ["stats-weekly"] as const,
     statsMonthly: ["stats-monthly"] as const,
     statsSummary: ["stats-summary"] as const,
