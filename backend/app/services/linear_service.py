@@ -25,7 +25,7 @@ class LinearService:
                 LINEAR_OAUTH_TOKEN_URL,
                 data={
                     "code": code,
-                    "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/linear/callback",
+                    "redirect_uri": f"{settings.backend_url}/auth/linear/callback",
                     "client_id": settings.linear_client_id,
                     "client_secret": settings.linear_client_secret,
                     "grant_type": "authorization_code",
