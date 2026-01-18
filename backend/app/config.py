@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # App
     debug: bool = True
     frontend_url: str = "http://localhost:3000"
+    backend_url: str = "http://localhost:8000"
     
     # Gemini
     gemini_api_key: str = ""
