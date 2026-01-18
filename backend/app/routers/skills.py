@@ -587,6 +587,13 @@ async def analyze_skills(
     service = get_gemini_service()
     result = await service.analyze_skills_from_commits(commits)
     
+    # LOGGING
+    try:
+        from app.services.activity_log import log_ai_activity
+        log_ai_activity(db, user.id, "analysis", f"GitHubコミットからスキルを分析しました（{len(commits)}件）")
+    except Exception as e:
+        logger.error(f"Failed to log activity: {e}")
+    
     # Convert to response format
     skill_updates = [
         SkillUpdate(
@@ -649,7 +656,8 @@ async def analyze_dream(
             # We use a localized import or helper to avoid circular imports? 
             # Or just duplicate get_current_user logic or use it if imported.
             # get_current_user is already imported at top of file
-            user = await get_current_user(authorization.replace("Bearer ", ""), db)
+            # get_current_user is imported at top of file
+            user = get_current_user(authorization.replace("Bearer ", ""), db)
             
             # Fetch skills
             skills = db.query(SkillModel).filter(
@@ -663,6 +671,19 @@ async def analyze_dream(
     
     service = get_gemini_service()
     steps = await service.analyze_dream(request.dream, request.targetDuration, current_skills=current_skills)
+    
+    # LOGGING
+    if authorization:
+        try:
+            from app.services.activity_log import log_ai_activity
+            # Need user object again or reuse if available. 
+            # If line 652 succeeded, `user` variable exists inside try block? No scope issue in Python if defined.
+            # Safe way: resolve user again or define outside.
+            # But authorization is available.
+            user_log = get_current_user(authorization.replace("Bearer ", ""), db)
+            log_ai_activity(db, user_log.id, "analysis", f"夢「{request.dream[:20]}...」の分析ステップを生成しました")
+        except Exception as e:
+            logger.error(f"Failed to log activity: {e}")
     
     # Ensure proper format
     result = []

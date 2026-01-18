@@ -325,6 +325,32 @@ JSONのみを返し、他の説明文は含めないでください。
                             kwargs["db"] = db
                             
                         result = await func(**kwargs)
+                        
+                        # LOGGING
+                        if user_id and db:
+                            try:
+                                from app.services.activity_log import log_ai_activity
+                                
+                                log_msg = f"ツール {func_name} を実行しました"
+                                log_type = "file" # Default
+                                
+                                if func_name == "add_task":
+                                    log_msg = f"タスク「{func_args.get('title')}」を追加しました"
+                                    log_type = "file"
+                                elif func_name == "get_calendar_events":
+                                    log_msg = "カレンダーの予定を確認しました"
+                                    log_type = "summary"
+                                elif func_name == "launch_app":
+                                    log_msg = f"アプリ「{func_args.get('app_name')}」を起動しました"
+                                    log_type = "folder"
+                                elif func_name == "get_current_time":
+                                    log_msg = "現在時刻を確認しました"
+                                    log_type = "summary"
+                                    
+                                log_ai_activity(db, user_id, log_type, log_msg)
+                            except Exception as log_err:
+                                print(f"Logging failed: {log_err}")
+
                     except Exception as e:
                         print(f"Tool execution error: {e}")
                         result = {"error": str(e)}

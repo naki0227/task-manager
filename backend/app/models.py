@@ -81,13 +81,15 @@ class Skill(Base):
 
 class Snapshot(Base):
     __tablename__ = "snapshots"
-
+    
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String(255), nullable=False)
-    windows = Column(Text, default="[]")  # JSON array
-    notes = Column(Text, default="")
+    user_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+    windows_json = Column(String) # JSON string of windows/tabs
+    notes = Column(String, default="")
+    
+    user = relationship("User", back_populates="snapshots")
 
 
 class FocusSession(Base):
@@ -101,5 +103,20 @@ class FocusSession(Base):
     # Relationship
     user = relationship("User", back_populates="focus_sessions")
 
-# Update User relationship
+
+class AIActivity(Base):
+    __tablename__ = "ai_activities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    type = Column(String) # folder, file, summary, analysis
+    message = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="ai_activities")
+
+
+# Update User relationships (for models defined after User)
+User.snapshots = relationship("Snapshot", back_populates="user")
 User.focus_sessions = relationship("FocusSession", back_populates="user")
+User.ai_activities = relationship("AIActivity", back_populates="user")
