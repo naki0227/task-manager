@@ -90,7 +90,7 @@ async def github_login(authorization: str = Header(None), token: str = None, db:
 
     params = {
         "client_id": settings.github_client_id,
-        "redirect_uri": f"{settings.frontend_url}/auth/github/callback",
+        "redirect_uri": f"{settings.backend_url}/auth/github/callback",
         "scope": "read:user user:email repo",
         "state": state,
     }
@@ -213,7 +213,7 @@ async def google_login(authorization: str = Header(None), token: str = None, db:
 
     params = {
         "client_id": settings.google_client_id,
-        "redirect_uri": f"{settings.frontend_url}/auth/google/callback",
+        "redirect_uri": f"{settings.backend_url}/auth/google/callback",
         "response_type": "code",
         "scope": " ".join([
             "openid",
@@ -248,7 +248,7 @@ async def google_callback(
                 "client_secret": settings.google_client_secret,
                 "code": code,
                 "grant_type": "authorization_code",
-                "redirect_uri": f"{settings.frontend_url}/auth/google/callback",
+                "redirect_uri": f"{settings.backend_url}/auth/google/callback",
             },
         )
         token_data = token_response.json()
@@ -336,7 +336,7 @@ async def slack_login(authorization: str = Header(None), token: str = None, db: 
 
     params = {
         "client_id": settings.slack_client_id,
-        "redirect_uri": f"{settings.frontend_url}/auth/slack/callback",
+        "redirect_uri": f"{settings.backend_url}/auth/slack/callback",
         "scope": "channels:history,channels:read,chat:write,users:read,users:read.email",
         "state": state,
     }
@@ -359,7 +359,7 @@ async def slack_callback(
                 "client_id": settings.slack_client_id,
                 "client_secret": settings.slack_client_secret,
                 "code": code,
-                "redirect_uri": f"{settings.frontend_url}/auth/slack/callback",
+                "redirect_uri": f"{settings.backend_url}/auth/slack/callback",
             },
         )
         token_data = token_response.json()
@@ -437,9 +437,16 @@ async def notion_login(authorization: str = Header(None), token: str = None, db:
         except Exception:
             pass
 
+    # Notion requires state to be a long string or uuid, '1' is too short or interpreted as int
+    if state:
+        state = f"vision_{state}"
+    else:
+        import uuid
+        state = f"vision_{uuid.uuid4()}"
+
     params = {
         "client_id": settings.notion_client_id,
-        "redirect_uri": f"{settings.frontend_url}/auth/notion/callback",
+        "redirect_uri": f"{settings.backend_url}/auth/notion/callback",
         "response_type": "code",
         "owner": "user",
         "state": state,
@@ -449,7 +456,63 @@ async def notion_login(authorization: str = Header(None), token: str = None, db:
 
 
 @router.get("/notion/callback")
-async def notion_callback(code: str, state: str = ""):
+async def notion_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "",
+    db: Session = Depends(get_db)
+):
+    """Handle Notion OAuth callback"""
+    # Authorization Code Auth
+    auth_credentials = (settings.notion_client_id, settings.notion_client_secret)
+    
+    async with httpx.AsyncClient() as client:
+        token_response = await client.post(
+            "https://api.notion.com/v1/oauth/token",
+            json={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": f"{settings.backend_url}/auth/notion/callback",
+            },
+            auth=auth_credentials
+        )
+        token_data = token_response.json()
+        
+        if "error" in token_data:
+            # Try basic auth header manual if standard auth fails, but client.post auth should work
+             raise HTTPException(status_code=400, detail=token_data.get("error", "OAuth failed"))
+        
+        access_token = token_data["access_token"]
+        # Notion response includes duplicated_template_id, bot_id, owner etc.
+        # Check owner to get user info
+        owner = token_data.get("owner", {})
+        user_info = owner.get("user", {})
+        
+        email = user_info.get("email")
+        name = user_info.get("name")
+        
+        # User resolving
+        user = None
+        if state and state.startswith("vision_"):
+            try:
+                state_id = state.replace("vision_", "")
+                if state_id.isdigit():
+                    user_id = int(state_id)
+                    user = db.query(User).filter(User.id == user_id).first()
+            except:
+                pass
+                
+        if not user and email:
+            user = await get_or_create_user_by_email(email, name or "Notion User", db)
+            
+        if user:
+            await save_oauth_token(user.id, "notion", access_token, db=db)
+            
+            jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
+            return RedirectResponse(
+                url=f"{settings.frontend_url}/settings?notion=connected&token={jwt_token}&user={user.email}"
+            )
+
     return RedirectResponse(url=f"{settings.frontend_url}/settings?notion=connected")
 
 
@@ -477,9 +540,9 @@ async def discord_login(authorization: str = Header(None), token: str = None, db
 
     params = {
         "client_id": settings.discord_client_id,
-        "redirect_uri": f"{settings.frontend_url}/auth/discord/callback",
+        "redirect_uri": f"{settings.backend_url}/auth/discord/callback",
         "response_type": "code",
-        "scope": "identify guilds messages.read",
+        "scope": "identify email guilds messages.read",
         "state": state,
     }
     url = f"https://discord.com/api/oauth2/authorize?{'&'.join(f'{k}={v}' for k, v in params.items())}"
@@ -487,7 +550,65 @@ async def discord_login(authorization: str = Header(None), token: str = None, db
 
 
 @router.get("/discord/callback")
-async def discord_callback(code: str, state: str = ""):
+async def discord_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "",
+    db: Session = Depends(get_db)
+):
+    """Handle Discord OAuth callback"""
+    async with httpx.AsyncClient() as client:
+        # Exchange code
+        data = {
+            "client_id": settings.discord_client_id,
+            "client_secret": settings.discord_client_secret,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": f"{settings.backend_url}/auth/discord/callback",
+        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        
+        token_response = await client.post(
+            "https://discord.com/api/oauth2/token",
+            data=data,
+            headers=headers
+        )
+        token_data = token_response.json()
+        
+        if "error" in token_data:
+             raise HTTPException(status_code=400, detail=token_data.get("error_description", "OAuth failed"))
+             
+        access_token = token_data["access_token"]
+        refresh_token = token_data.get("refresh_token")
+        
+        # Get User Info
+        user_res = await client.get(
+            "https://discord.com/api/users/@me",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        user_data = user_res.json()
+        
+        email = user_data.get("email")
+        username = user_data.get("username")
+        discriminator = user_data.get("discriminator")
+        full_name = f"{username}#{discriminator}" if discriminator != '0' else username
+        
+        user = None
+        if state and state.isdigit():
+             user_id = int(state)
+             user = db.query(User).filter(User.id == user_id).first()
+             
+        if not user and email:
+             user = await get_or_create_user_by_email(email, full_name, db)
+             
+        if user:
+            await save_oauth_token(user.id, "discord", access_token, refresh_token, db)
+            
+            jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
+            return RedirectResponse(
+                url=f"{settings.frontend_url}/settings?discord=connected&token={jwt_token}&user={user.email}"
+            )
+
     return RedirectResponse(url=f"{settings.frontend_url}/settings?discord=connected")
 
 
@@ -512,9 +633,13 @@ async def linear_login(authorization: str = Header(None), token: str = None, db:
         except Exception:
             pass
 
+    client_id = settings.linear_client_id
+    if not client_id:
+        raise HTTPException(status_code=500, detail="Linear Client ID not configured")
+
     params = {
-        "client_id": settings.linear_client_id,
-        "redirect_uri": f"{settings.frontend_url}/auth/linear/callback",
+        "client_id": client_id,
+        "redirect_uri": f"{settings.backend_url}/auth/linear/callback",
         "response_type": "code",
         "scope": "read write",
         "state": state,
@@ -592,18 +717,82 @@ async def todoist_login(authorization: str = Header(None), token: str = None, db
         except Exception:
             pass
 
+    client_id = settings.todoist_client_id
+    if not client_id:
+        raise HTTPException(status_code=500, detail="Todoist Client ID not configured")
+
     params = {
-        "client_id": settings.todoist_client_id,
+        "client_id": client_id,
         "scope": "data:read_write",
         "state": state,
+        "redirect_uri": f"{settings.backend_url}/auth/todoist/callback",
     }
     url = f"https://todoist.com/oauth/authorize?{'&'.join(f'{k}={v}' for k, v in params.items())}"
     return RedirectResponse(url=url)
 
 
 @router.get("/todoist/callback")
-async def todoist_callback(code: str, state: str = ""):
-    return RedirectResponse(url=f"{settings.frontend_url}/settings?todoist=connected")
+async def todoist_callback(
+    code: str, 
+    background_tasks: BackgroundTasks,
+    state: str = "", 
+    db: Session = Depends(get_db)
+):
+    """Handle Todoist OAuth callback"""
+    async with httpx.AsyncClient() as client:
+        # Exchange code for token
+        # Todoist requires POST call
+        token_response = await client.post(
+            "https://todoist.com/oauth/access_token",
+            data={
+                "client_id": settings.todoist_client_id,
+                "client_secret": settings.todoist_client_secret,
+                "code": code,
+                "redirect_uri": f"{settings.backend_url}/auth/todoist/callback",
+            },
+        )
+        token_data = token_response.json()
+        
+        if "error" in token_data:
+            raise HTTPException(status_code=400, detail=token_data.get("error", "OAuth failed"))
+            
+        access_token = token_data["access_token"]
+        
+        # Get user info for email/id
+        # Use sync API to get user info
+        user_res = await client.post(
+            "https://api.todoist.com/sync/v9/sync",
+            headers={"Authorization": f"Bearer {access_token}"},
+            data={"sync_token": "*", "resource_types": '["user"]'},
+        )
+        user_sync = user_res.json()
+        print(f"DEBUG: Todoist User Sync Response: {user_sync}") # Debugging
+        
+        email = user_sync.get("user", {}).get("email")
+        full_name = user_sync.get("user", {}).get("full_name")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Todoist email not found")
+            
+        user = None
+        if state and state.isdigit():
+            user_id = int(state)
+            user = db.query(User).filter(User.id == user_id).first()
+            
+        if not user:
+             user = await get_or_create_user_by_email(email, full_name or "Todoist User", db)
+        
+        # Save Token
+        await save_oauth_token(user.id, "todoist", access_token, db=db)
+        
+        # Trigger Sync (Optional, if we had sync_todoist_tasks_task)
+        # from app.routers.todoist import sync_todoist_tasks_task
+        # background_tasks.add_task(sync_todoist_tasks_task, user.id)
+        
+        jwt_token = create_access_token({"sub": user.email, "user_id": user.id})
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/settings?todoist=connected&token={jwt_token}&user={user.email}"
+        )
 
 @router.delete("/{provider}")
 async def disconnect_provider(
