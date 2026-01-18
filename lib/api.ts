@@ -112,7 +112,7 @@ class VisionAPIClient {
     }
 
     async deleteTask(taskId: number): Promise<void> {
-        return this.fetch(`/prepared-tasks/${taskId}`, {
+        return this.fetch(`/api/prepared-tasks/${taskId}`, {
             method: "DELETE",
         });
     }
