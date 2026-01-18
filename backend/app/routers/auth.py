@@ -90,7 +90,7 @@ async def github_login(authorization: str = Header(None), token: str = None, db:
 
     params = {
         "client_id": settings.github_client_id,
-        "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/github/callback",
+        "redirect_uri": f"{settings.frontend_url}/auth/github/callback",
         "scope": "read:user user:email repo",
         "state": state,
     }
@@ -213,7 +213,7 @@ async def google_login(authorization: str = Header(None), token: str = None, db:
 
     params = {
         "client_id": settings.google_client_id,
-        "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/google/callback",
+        "redirect_uri": f"{settings.frontend_url}/auth/google/callback",
         "response_type": "code",
         "scope": " ".join([
             "openid",
@@ -248,7 +248,7 @@ async def google_callback(
                 "client_secret": settings.google_client_secret,
                 "code": code,
                 "grant_type": "authorization_code",
-                "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/google/callback",
+                "redirect_uri": f"{settings.frontend_url}/auth/google/callback",
             },
         )
         token_data = token_response.json()
@@ -336,7 +336,7 @@ async def slack_login(authorization: str = Header(None), token: str = None, db: 
 
     params = {
         "client_id": settings.slack_client_id,
-        "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/slack/callback",
+        "redirect_uri": f"{settings.frontend_url}/auth/slack/callback",
         "scope": "channels:history,channels:read,chat:write,users:read,users:read.email",
         "state": state,
     }
@@ -359,6 +359,7 @@ async def slack_callback(
                 "client_id": settings.slack_client_id,
                 "client_secret": settings.slack_client_secret,
                 "code": code,
+                "redirect_uri": f"{settings.frontend_url}/auth/slack/callback",
             },
         )
         token_data = token_response.json()
@@ -438,7 +439,7 @@ async def notion_login(authorization: str = Header(None), token: str = None, db:
 
     params = {
         "client_id": settings.notion_client_id,
-        "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/notion/callback",
+        "redirect_uri": f"{settings.frontend_url}/auth/notion/callback",
         "response_type": "code",
         "owner": "user",
         "state": state,
@@ -476,7 +477,7 @@ async def discord_login(authorization: str = Header(None), token: str = None, db
 
     params = {
         "client_id": settings.discord_client_id,
-        "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/discord/callback",
+        "redirect_uri": f"{settings.frontend_url}/auth/discord/callback",
         "response_type": "code",
         "scope": "identify guilds messages.read",
         "state": state,
@@ -513,7 +514,7 @@ async def linear_login(authorization: str = Header(None), token: str = None, db:
 
     params = {
         "client_id": settings.linear_client_id,
-        "redirect_uri": f"{settings.frontend_url.replace('3000', '8000')}/auth/linear/callback",
+        "redirect_uri": f"{settings.frontend_url}/auth/linear/callback",
         "response_type": "code",
         "scope": "read write",
         "state": state,

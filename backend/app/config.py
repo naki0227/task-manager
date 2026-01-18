@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     is_cloud_env: bool = False
 
     class Config:
-        env_file = "../.env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"  # Ignore unknown env vars
 
