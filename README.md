@@ -1,91 +1,140 @@
 # DreamCatcher
 
-> **"AIが準備、あとは始めるだけ"** - 自律型ライフOS
+<div align="center">
+  <h3>"AI-Powered Autonomous Life OS"</h3>
+  <p>自律型AIエージェントが、あなたの「夢」を具体的な「行動」に変えるタスク管理プラットフォーム</p>
 
-DreamCatcher（旧称 Vision）は、AIがあなたの生活と仕事を自律的にサポートする次世代のタスク管理システムです。
+  <p>
+    <img src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js" alt="Next.js" />
+    <img src="https://img.shields.io/badge/FastAPI-0.109-009688?style=flat-square&logo=fastapi" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/Database-PostgreSQL-336791?style=flat-square&logo=postgresql" alt="PostgreSQL" />
+    <img src="https://img.shields.io/badge/AI-Gemini%202.5-8E75B2?style=flat-square&logo=google" alt="Gemini" />
+    <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
+  </p>
+</div>
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Stack](https://img.shields.io/badge/Next.js-FastAPI-black)
-![License](https://img.shields.io/badge/license-MIT-green)
+---
 
-## ✨ 特徴 (Key Features)
+## 📖 概要 (Overview)
 
-- 🤖 **AI Agent**: Gemini 2.5 Flash を搭載し、チャット形式でタスク登録や相談が可能
-- 🚀 **Quick Launch**: ダッシュボードから1クリックで開発環境、会議Zoom、学習ノートを起動（デスクトップ版のみ）
-- 🔄 **Infinite Context Resume**: 作業中のブラウザタブとVS Codeの状態を丸ごと保存・復元（デスクトップ版のみ）
-- 📊 **Real-time Stats**: 集中時間、タスク完了数、継続日数を可視化
-- 🧠 **Dream Analysis**: 漠然とした夢を具体的な実行ステップに自動分解
+DreamCatcher（ドリームキャッチャー）は、単なるToDoリストを超えた**「目標達成支援システム」**です。
+ユーザーが抱く漠然とした目標（例:「フルスタックエンジニアになりたい」）を入力するだけで、生成AI (Google Gemini 2.5) が現状のスキルセットを分析し、実現までの具体的なロードマップと週間タスクを自動生成します。
 
-## 🚀 クイックスタート (Docker推奨)
+従来のタスク管理ツールが「やるべきこと(Why/What)」の管理に留まるのに対し、DreamCatcherは**「どう実現するか(How)」までをエンジニアリングする**ことを目的としています。
 
-Mac / Windows / Linux で最も簡単に起動する方法です。[Docker Desktop](https://www.docker.com/products/docker-desktop/) が必要です。
+---
 
-### 1. リポジトリのクローン
-```bash
-git clone https://github.com/naki0227/task-manager.git
-cd task-manager
+## 🚀 技術的なこだわり (Technical Highlights)
+
+本プロジェクトでは、モダンなWeb開発技術とAIの実践的な統合に注力しました。
+
+### 1. Modern Frontend Architecture
+- **Framework**: Next.js (App Router) を採用し、Server Componentsによるパフォーマンス最適化とSEO対策を実施。
+- **UI/UX**: Tailwind CSS + Framer Motion により、直感的で流動的なインタラクションを実現。
+- **State Management**: 複雑なタスク状態管理にはReact Queryを採用し、サーバー状態とUIの同期を効率化。
+
+### 2. Scalable Backend & AI Integration
+- **High Performance**: PythonのFastAPI (Asynchronous) を採用し、AI推論や外部API連携などのI/Oバウンドな処理を非同期で効率的に処理。
+- **Function Calling**: Gemini APIのFunction Calling機能を活用し、チャットインターフェースから「タスク追加」「カレンダー確認」などのシステム操作を自然言語で実行可能に実装。
+- **Robustness**: Pydanticによる厳格な型定義とバリデーションにより、AIの非決定的な出力をシステムが扱える構造化データに変換。
+
+### 3. Data Sync & Integration
+- **Hybrid Database**: ローカル開発時はSQLite、本番環境(Cloud)ではPostgreSQLにシームレスに切り替わるアーキテクチャ設計。
+- **External APIs**: Google Calendar, GitHub, Slack, Notion等、多数の外部サービスとのOAuth認証・データ同期パイプラインを構築。
+
+---
+
+## ✨ 主な機能 (Core Features)
+
+### 🎯 Dream Analysis Engine (夢分析エンジン)
+ユーザーの「夢」と「現状」のギャップを埋めるためのステップを自動生成します。
+- **スキル分析**: GitHubAPIを通じてコミットログを解析し、ユーザーの現在の技術スタックと熟練度を推定。
+- **ギャップ分析**: 目標達成に不足しているスキルやリソースを特定。
+- **プランニング**: 週間単位の具体的なアクションプラン（学習教材やプロジェクト案）を提示。
+
+### 🧠 Autonomous Agent (自律エージェント)
+チャットボットが単なる相談相手ではなく、実務を行うアシスタントとして機能します。
+- 「来週の空き時間は？」→ Google Calendarを確認して回答。
+- 「このタスクを登録して」→ データベースにTodoを作成し、必要に応じてSlack通知。
+
+### ⏱️ Focus & Flow State Support
+- **Focus Timer**: ポモドーロテクニックに基づいたタイマー機能。
+- **Infinite Context Resume**: (Local Only) "あの作業をしていた状態" をスナップショットとして保存。ブラウザのタブセットやVS Codeのワークスペース状態をワンクリックで復元。
+
+---
+
+## 🏗️ アーキテクチャ図 (System Architecture)
+
+```mermaid
+graph TD
+    User((User)) --> Client[Next.js Client]
+    Client -->|REST API| Server[FastAPI Server]
+    
+    subgraph "Backend Services"
+        Server --> Auth[OAuth Manager]
+        Server --> Agent[AI Agent Service]
+        Server --> Sync[Sync Worker]
+    end
+    
+    subgraph "Data Store"
+        Server --> DB[(PostgreSQL)]
+        Agent --> VectorDB[(Log Store)]
+    end
+    
+    subgraph "External Ecosystem"
+        Agent -->|LLM| Gemini[Google Gemini API]
+        Sync <-->|Sync| GCal[Google Calendar]
+        Sync <-->|Analyze| GitHub[GitHub API]
+        Sync <-->|Import| Notion[Notion API]
+    end
 ```
 
-### 2. 環境設定
-`.env.example` をコピーして `.env` を作成し、Gemini APIキーを設定してください。
-```bash
-cp .env.example .env
-# .env を編集して GEMINI_API_KEY などを入力
-```
+---
 
-### 3. アプリ起動
-```bash
-docker-compose up --build
-```
-ブラウザで [http://localhost:3000](http://localhost:3000) にアクセスしてください。
+## 🛠️ 開発環境のセットアップ (Getting Started)
 
-## ☁️ クラウド版 (Web) について
+採用担当者様向けに、ローカル環境での簡単な起動方法を記載します。
 
-本アプリケーションはVercel等へのデプロイも可能ですが、以下の機能は**ローカル環境（デスクトップ）でのみ動作**します。クラウド環境では自動的に無効化されます。
+### 前提条件
+- Docker & Docker Compose
 
-- **Quick Launch**: アプリケーション起動機能
-- **Infinite Context Resume**: ブラウザ/エディタ操作機能
-- **Local File Operations**: 自動フォルダ作成など
+### 起動手順
+1. リポジトリをクローン
+   ```bash
+   git clone https://github.com/naki0227/task-manager.git
+   cd task-manager
+   ```
+2. 環境変数の設定 (`.env.example` をコピー)
+   ```bash
+   cp .env.example .env
+   # GEMINI_API_KEY のみを設定すれば最小構成で動作します
+   ```
+3. コンテナ起動
+   ```bash
+   docker-compose up --build
+   ```
+   - Frontend: http://localhost:3000
+   - API Docs: http://localhost:8000/docs
 
-## 🛠️ 手動セットアップ (Dockerなし)
+---
 
-開発者向けの手順です。
+## 🗺️ 将来の展望 (Roadmap)
 
-### Backend (FastAPI)
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+現在、[GitHub Issues](https://github.com/naki0227/task-manager/issues) にて以下の機能開発を計画・進行しています。
 
-### Frontend (Next.js)
-```bash
-# プロジェクトルートで
-npm install
-npm run dev
-```
+- [ ] **Mobile Native App (React Native)**: 外出先でのタスク確認とプッシュ通知の実現 (#19)
+- [ ] **VS Code Extension**: エディタ内でのタスク管理とコーディング時間の自動計測 (#20)
+- [ ] **Offline-First**: RxDBを用いたローカルファーストなデータ同期基盤の構築 (#22)
 
-## 📁 プロジェクト構成
+---
 
-```
-dreamcatcher/
-├── app/                    # Next.js Frontend
-│   ├── snapshots/         # Context Resume UI
-│   ├── stats/             # 統計 UI
-│   └── ...
-├── backend/                # FastAPI Python Server
-│   ├── app/routers/       # API Endpoints
-│   ├── app/services/      # Business Logic (Gemini, Tools)
-│   └── main.py            # Entry Point
-├── components/             # React Components
-│   ├── dashboard/         # Dashboard Widgets (QuickLaunch etc)
-│   └── ...
-└── lib/                    # Shared Utilities
-    └── api.ts             # API Client
-```
+## 👤 Author
 
-## 📄 ライセンス
+**Naki** (GitHub: [@naki0227](https://github.com/naki0227))
+- Fullstack Developer focused on AI Integration and Product Engineering.
 
-MIT License
+---
+
+<p align="center">
+  <small>© 2026 DreamCatcher Project. MIT License.</small>
+</p>
