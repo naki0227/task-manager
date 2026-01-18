@@ -128,13 +128,6 @@ graph TD
 
 ---
 
-## 👤 Author
-
-**Naki** (GitHub: [@naki0227](https://github.com/naki0227))
-- Fullstack Developer focused on AI Integration and Product Engineering.
-
----
-
 <p align="center">
   <small>© 2026 DreamCatcher Project. MIT License.</small>
 </p>
