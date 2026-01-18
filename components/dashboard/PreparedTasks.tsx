@@ -16,8 +16,25 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { visionAPI, PreparedTask } from "@/lib/api";
 
-// ... (Colors and Labels constants - unchanged)
+const SOURCE_COLORS = {
+    github: "from-purple-500 to-purple-600",
+    calendar: "from-blue-500 to-blue-600",
+    slack: "from-green-500 to-green-600",
+    dream: "from-amber-500 to-orange-500",
+    manual: "from-gray-500 to-gray-600",
+};
+
+const SOURCE_LABELS = {
+    github: "GitHub",
+    calendar: "カレンダー",
+    slack: "Slack",
+    dream: "夢から逆算",
+    manual: "手動作成",
+};
 
 // Sortable Item Component
 function SortableTaskItem(props: {
