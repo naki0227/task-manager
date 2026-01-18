@@ -7,12 +7,10 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      # Data persistence for SQLite
-      - ./backend/sql_app.db:/app/sql_app.db
+      - ./backend/vision.db:/app/vision.db
     environment:
-      - DATABASE_URL=sqlite:///./sql_app.db
-      - IS_CLOUD_ENV=false
-      # Pass through API keys if set in shell
+      - DATABASE_URL=sqlite:///./vision.db
+      # Pass through API keys
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
@@ -20,6 +18,15 @@ services:
       - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NOTION_CLIENT_ID=${NOTION_CLIENT_ID}
+      - NOTION_CLIENT_SECRET=${NOTION_CLIENT_SECRET}
+      - TODOIST_CLIENT_ID=${TODOIST_CLIENT_ID}
+      - TODOIST_CLIENT_SECRET=${TODOIST_CLIENT_SECRET}
+      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
+      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+      - DEBUG=${DEBUG}
 
   frontend:
     build:
@@ -28,7 +35,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Client-side access (Browser -> Backend)
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend

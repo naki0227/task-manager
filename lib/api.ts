@@ -59,6 +59,20 @@ export interface DreamStep {
     subTasks?: SubTask[];
 }
 
+export interface SkillUpdate {
+    skillId: string;
+    skillName: string;
+    expGain: number;
+    reason: string;
+}
+
+export interface SkillAnalysisResponse {
+    analyzedCommits: number;
+    skillUpdates: SkillUpdate[];
+    newSkillsDetected: string[];
+    summary: string;
+}
+
 // API Client
 class VisionAPIClient {
     private baseUrl: string;
@@ -193,6 +207,7 @@ class VisionAPIClient {
             return "承知しました。他に何かお手伝いできることはありますか？";
         }
 
+
         try {
             const res = await this.fetch<{ response: string }>("/api/chat", {
                 method: "POST",
@@ -204,6 +219,26 @@ class VisionAPIClient {
             // Fallback
             return "すみません、エラーが発生しました。もう一度お試しください。";
         }
+    }
+
+    // Skill Analysis
+    async analyzeSkills(sinceDays: number = 7): Promise<SkillAnalysisResponse> {
+        if (useMock('skills')) {
+            // Mock response
+            return {
+                analyzedCommits: 15,
+                skillUpdates: [
+                    { skillId: "python", skillName: "Python", expGain: 120, reason: "FastAPI Project Development" },
+                    { skillId: "typescript", skillName: "TypeScript", expGain: 80, reason: "Frontend UI Components" }
+                ],
+                newSkillsDetected: [],
+                summary: "Backend implementation is progressing well."
+            };
+        }
+        return this.fetch<SkillAnalysisResponse>("/api/skills/analyze", {
+            method: "POST",
+            body: JSON.stringify({ sinceDays }),
+        });
     }
 
     // Dream to Steps

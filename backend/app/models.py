@@ -87,7 +87,7 @@ class Snapshot(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
-    windows_json = Column(String) # JSON string of windows/tabs
+    windows = Column(String) # JSON string of windows/tabs
     notes = Column(String, default="")
     
     user = relationship("User", back_populates="snapshots")
