@@ -1,3 +1,21 @@
+
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { visionAPI, PreparedTask } from "@/lib/api";
@@ -18,9 +36,129 @@ const SOURCE_LABELS = {
     manual: "手動作成",
 };
 
+// Sortable Item Component
+function SortableTaskItem(props: {
+    task: PreparedTask;
+    onStart: (id: number) => void;
+    onDelete: (id: number) => void;
+}) {
+    const { task, onStart, onDelete } = props;
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: task.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : 1,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className={`card card-hover ${task.status === "completed" && "opacity-50"}`}
+        >
+            <div className="flex gap-4">
+                {/* Left: Source Indicator */}
+                <div className={`w-1 rounded-full bg-gradient-to-b ${SOURCE_COLORS[task.source]}`} />
+
+                {/* Content */}
+                <div className="flex-1">
+                    {/* Title Row */}
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r ${SOURCE_COLORS[task.source]} text-white`}>
+                                    {SOURCE_LABELS[task.source]}
+                                </span>
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="w-3 h-3" />
+                                    {task.estimatedTime}
+                                </span>
+                            </div>
+                            <h3 className="font-semibold">{task.title}</h3>
+                            <p className="text-sm text-muted-foreground mt-0.5">{task.description}</p>
+                        </div>
+
+                        {/* Action Button - Prevent drag when clicking buttons */}
+                        <div className="flex items-center gap-2" onPointerDown={(e) => e.stopPropagation()}>
+                            {task.status === "ready" && (
+                                <>
+                                    <button
+                                        onClick={() => onStart(task.id)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity shrink-0"
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        始める
+                                    </button>
+                                    <button
+                                        onClick={() => onDelete(task.id)}
+                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                        title="削除"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </>
+                            )}
+                            {task.status === "in-progress" && (
+                                <span className="flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg font-medium shrink-0">
+                                    <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+                                    作業中
+                                </span>
+                            )}
+                            {task.status === "completed" && (
+                                <span className="flex items-center gap-2 px-4 py-2 text-muted-foreground shrink-0">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    完了
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Prepared Items */}
+                    <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                            <FolderOpen className="w-3 h-3" />
+                            AIが準備したもの
+                        </p>
+                        <ul className="space-y-1">
+                            {task.preparedItems.map((item, idx) => (
+                                <li key={idx} className="text-sm text-foreground/80 flex items-center gap-2">
+                                    <FileCode className="w-3 h-3 text-primary/50" />
+                                    {item}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function PreparedTasks() {
     const [tasks, setTasks] = useState<PreparedTask[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Require 8px movement before drag starts (prevent accidental clicks)
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         const loadTasks = async () => {
@@ -57,6 +195,24 @@ export function PreparedTasks() {
         }
     };
 
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            setTasks((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+
+                const newItems = arrayMove(items, oldIndex, newIndex);
+
+                // Call API in background
+                visionAPI.reorderTasks(newItems.map(t => t.id)).catch(console.error);
+
+                return newItems;
+            });
+        }
+    };
+
     const readyTasks = tasks.filter(t => t.status === "ready");
 
     if (loading) {
@@ -79,87 +235,27 @@ export function PreparedTasks() {
             </div>
 
             {/* Task Cards */}
-            <div className="space-y-3">
-                {tasks.map((task) => (
-                    <div
-                        key={task.id}
-                        className={`card card-hover ${task.status === "completed" && "opacity-50"}`}
-                    >
-                        <div className="flex gap-4">
-                            {/* Left: Source Indicator */}
-                            <div className={`w-1 rounded-full bg-gradient-to-b ${SOURCE_COLORS[task.source]}`} />
-
-                            {/* Content */}
-                            <div className="flex-1">
-                                {/* Title Row */}
-                                <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r ${SOURCE_COLORS[task.source]} text-white`}>
-                                                {SOURCE_LABELS[task.source]}
-                                            </span>
-                                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                <Clock className="w-3 h-3" />
-                                                {task.estimatedTime}
-                                            </span>
-                                        </div>
-                                        <h3 className="font-semibold">{task.title}</h3>
-                                        <p className="text-sm text-muted-foreground mt-0.5">{task.description}</p>
-                                    </div>
-
-                                    {/* Action Button */}
-                                    {task.status === "ready" && (
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleStart(task.id)}
-                                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity shrink-0"
-                                            >
-                                                <Play className="w-4 h-4" />
-                                                始める
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(task.id)}
-                                                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                                                title="削除"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {task.status === "in-progress" && (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg font-medium shrink-0">
-                                            <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                                            作業中
-                                        </span>
-                                    )}
-                                    {task.status === "completed" && (
-                                        <span className="flex items-center gap-2 px-4 py-2 text-muted-foreground shrink-0">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            完了
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Prepared Items */}
-                                <div className="mt-3 pt-3 border-t border-border">
-                                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                                        <FolderOpen className="w-3 h-3" />
-                                        AIが準備したもの
-                                    </p>
-                                    <ul className="space-y-1">
-                                        {task.preparedItems.map((item, idx) => (
-                                            <li key={idx} className="text-sm text-foreground/80 flex items-center gap-2">
-                                                <FileCode className="w-3 h-3 text-primary/50" />
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext
+                    items={tasks.map(t => t.id)}
+                    strategy={verticalListSortingStrategy}
+                >
+                    <div className="space-y-3">
+                        {tasks.map((task) => (
+                            <SortableTaskItem
+                                key={task.id}
+                                task={task}
+                                onStart={handleStart}
+                                onDelete={handleDelete}
+                            />
+                        ))}
                     </div>
-                ))}
-            </div>
+                </SortableContext>
+            </DndContext>
         </div>
     );
 }
