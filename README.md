@@ -1,29 +1,24 @@
-# Vision - Autonomous Life OS
+# DreamCatcher
 
-> **「AIが準備、あとは始めるだけ」** - 意志を必要としない自律型ライフOS
+> **"AIが準備、あとは始めるだけ"** - 自律型ライフOS
+
+DreamCatcher（旧称 Vision）は、AIがあなたの生活と仕事を自律的にサポートする次世代のタスク管理システムです。
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black)
+![Stack](https://img.shields.io/badge/Next.js-FastAPI-black)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## 🎯 コンセプト
+## ✨ 特徴 (Key Features)
 
-従来のタスク管理は「やることリストを見て、自分で頑張る」。  
-Visionは違います。**AIが勝手に準備を終わらせ、あとは実行するだけ**。
+- 🤖 **AI Agent**: Gemini 2.5 Flash を搭載し、チャット形式でタスク登録や相談が可能
+- 🚀 **Quick Launch**: ダッシュボードから1クリックで開発環境、会議Zoom、学習ノートを起動（デスクトップ版のみ）
+- 🔄 **Infinite Context Resume**: 作業中のブラウザタブとVS Codeの状態を丸ごと保存・復元（デスクトップ版のみ）
+- 📊 **Real-time Stats**: 集中時間、タスク完了数、継続日数を可視化
+- 🧠 **Dream Analysis**: 漠然とした夢を具体的な実行ステップに自動分解
 
-- 🚀 **Zero Start**: フォルダ作成、初期コード、資料要約をAIが自動実行
-- 🧠 **Flow Synergy**: 思考をノードグラフ化、論理の飛躍を検知
-- 💸 **Loss Aversion**: サボりの機会損失をリアルタイム可視化
-- 🔄 **Infinite Resume**: ボタン一つで作業環境を完全復元
-- 🎮 **Auto Skill Tree**: 成果物からRPG風スキルツリーを自動生成
+## 🚀 クイックスタート (Docker推奨)
 
-## 🛠️ 技術スタック
-
-- **Frontend**: Next.js 16, React, Tailwind CSS, Framer Motion, React Flow
-- **Backend**: Python (FastAPI) - *別リポジトリ*
-- **AI**: Gemini 2.5 Flash API
-
-## 🚀 セットアップ手順
+Mac / Windows / Linux で最も簡単に起動する方法です。[Docker Desktop](https://www.docker.com/products/docker-desktop/) が必要です。
 
 ### 1. リポジトリのクローン
 ```bash
@@ -31,97 +26,66 @@ git clone https://github.com/naki0227/task-manager.git
 cd task-manager
 ```
 
-### 2. バックエンド (Python) の準備
-```bash
-cd backend
-
-# 仮想環境の作成と有効化
-# Mac / Linux:
-python3 -m venv venv
-source venv/bin/activate
-
-# Windows:
-# python -m venv venv
-# venv\Scripts\activate
-
-# 依存関係のインストール
-pip install -r requirements.txt
-```
-
-### 3. フロントエンド (Node.js) の準備
-```bash
-# 元のディレクトリに戻る
-cd ..
-
-# 依存関係のインストール
-npm install
-```
-
-### 4. 環境変数の設定
-`.env.example` をコピーして `.env` を作成し、必要なAPIキーを入力してください。
+### 2. 環境設定
+`.env.example` をコピーして `.env` を作成し、Gemini APIキーを設定してください。
 ```bash
 cp .env.example .env
+# .env を編集して GEMINI_API_KEY などを入力
 ```
 
-### 5. 起動
+### 3. アプリ起動
 ```bash
-# 開発サーバーの起動 (Frontend + Backend)
+docker-compose up --build
+```
+ブラウザで [http://localhost:3000](http://localhost:3000) にアクセスしてください。
+
+## ☁️ クラウド版 (Web) について
+
+本アプリケーションはVercel等へのデプロイも可能ですが、以下の機能は**ローカル環境（デスクトップ）でのみ動作**します。クラウド環境では自動的に無効化されます。
+
+- **Quick Launch**: アプリケーション起動機能
+- **Infinite Context Resume**: ブラウザ/エディタ操作機能
+- **Local File Operations**: 自動フォルダ作成など
+
+## 🛠️ 手動セットアップ (Dockerなし)
+
+開発者向けの手順です。
+
+### Backend (FastAPI)
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Frontend (Next.js)
+```bash
+# プロジェクトルートで
+npm install
 npm run dev
 ```
 
 ## 📁 プロジェクト構成
 
 ```
-vision/
-├── app/                    # Next.js App Router
-│   ├── page.tsx           # ダッシュボード
-│   ├── thinking/          # 思考ノード (Flow Synergy)
-│   ├── skills/            # スキルツリー
-│   ├── resume/            # Infinite Resume
-│   ├── projects/          # プロジェクト一覧
-│   └── settings/          # 設定 (OAuth連携含む)
-├── components/
-│   ├── dashboard/         # ダッシュボードコンポーネント
-│   ├── visuals/           # グラフ・ツリー可視化
-│   ├── layout/            # レイアウト (Sidebar等)
-│   ├── ui/                # 共通UI (Toast, Skeleton等)
-│   └── onboarding/        # オンボーディング
-├── lib/
-│   ├── api.ts             # API クライアント (Python連携用)
-│   ├── storage.ts         # ローカルストレージ
-│   └── utils.ts           # ユーティリティ
-└── public/
-    └── manifest.json      # PWA設定
+dreamcatcher/
+├── app/                    # Next.js Frontend
+│   ├── snapshots/         # Context Resume UI
+│   ├── stats/             # 統計 UI
+│   └── ...
+├── backend/                # FastAPI Python Server
+│   ├── app/routers/       # API Endpoints
+│   ├── app/services/      # Business Logic (Gemini, Tools)
+│   └── main.py            # Entry Point
+├── components/             # React Components
+│   ├── dashboard/         # Dashboard Widgets (QuickLaunch etc)
+│   └── ...
+└── lib/                    # Shared Utilities
+    └── api.ts             # API Client
 ```
-
-## 🔗 API連携 (Python チーム向け)
-
-詳細は [BACKEND_SPEC.md](./docs/BACKEND_SPEC.md) を参照してください。
-
-### エンドポイント一覧
-
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | `/api/prepared-tasks` | AI準備済みタスク一覧 |
-| POST | `/api/prepared-tasks/:id/start` | タスク開始 |
-| GET | `/api/ai-activities` | AI活動ログ |
-| GET | `/api/snapshots` | コンテキストスナップショット |
-| POST | `/api/snapshots/:id/resume` | 環境復元 |
-| GET | `/api/skills` | スキルデータ |
-| POST | `/api/dream/analyze` | 夢→ステップ分解 |
-
-## ⌨️ キーボードショートカット
-
-| ショートカット | 動作 |
-|---------------|------|
-| `Cmd/Ctrl + K` | グローバル検索 |
-| `Esc` | モーダルを閉じる |
-
-## 👥 チームメンバー
-
-- **Frontend**: Vision UI 担当
-- **Backend (Python)**: API / AI連携担当
 
 ## 📄 ライセンス
 
-MIT
+MIT License

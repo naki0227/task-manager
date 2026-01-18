@@ -3,16 +3,27 @@ from pydantic import BaseModel
 import subprocess
 import os
 
+from app.config import get_settings
+
 router = APIRouter()
 
 class LaunchRequest(BaseModel):
     action_id: str
+
+@router.get("/config")
+async def get_system_config():
+    settings = get_settings()
+    return {"is_cloud_env": settings.is_cloud_env}
 
 @router.post("/launch")
 async def launch_action(request: LaunchRequest):
     """
     Launch local applications or URLs based on action ID
     """
+    settings = get_settings()
+    if settings.is_cloud_env:
+        raise HTTPException(status_code=403, detail="Not supported in cloud environment")
+        
     action = request.action_id
     
     try:
