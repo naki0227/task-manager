@@ -39,7 +39,11 @@ async def get_tasks(
 ):
     """Get all tasks for current user"""
     user = get_current_user(authorization, db)
-    tasks = db.query(Task).filter(Task.user_id == user.id).all()
+    # Filter out archived/deleted tasks
+    tasks = db.query(Task).filter(
+        Task.user_id == user.id,
+        Task.status != "archived"
+    ).all()
     
     # Map raw model to response (handling JSON fields if needed)
     response = []
@@ -48,7 +52,7 @@ async def get_tasks(
             id=t.id,
             title=t.title,
             description=t.description or "",
-            prepared_items=[], # TODO: Store as JSON string in DB if needed
+            prepared_items=[],
             estimated_time=t.estimated_time or "30分",
             source=t.source or "manual",
             status=t.status,
@@ -102,13 +106,14 @@ async def delete_task(
     authorization: str = Header(None),
     db: Session = Depends(get_db)
 ):
-    """Delete a task"""
+    """Delete a task (Soft Delete)"""
     user = get_current_user(authorization, db)
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
     
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
         
-    db.delete(task)
+    # Soft delete instead of hard delete to prevent re-sync
+    task.status = "archived"
     db.commit()
     return {"status": "success"}
