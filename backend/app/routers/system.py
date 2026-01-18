@@ -12,17 +12,18 @@ class LaunchRequest(BaseModel):
 
 @router.get("/config")
 async def get_system_config():
-    settings = get_settings()
-    return {"is_cloud_env": settings.is_cloud_env}
+    import sys
+    # Treat non-macOS as "cloud" (feature limited) environment for UI purposes
+    return {"is_cloud_env": sys.platform != "darwin"}
 
 @router.post("/launch")
 async def launch_action(request: LaunchRequest):
     """
     Launch local applications or URLs based on action ID
     """
-    settings = get_settings()
-    if settings.is_cloud_env:
-        raise HTTPException(status_code=403, detail="Not supported in cloud environment")
+    import sys
+    if sys.platform != "darwin":
+        raise HTTPException(status_code=403, detail="Not supported on this platform (macOS only)")
         
     action = request.action_id
     
