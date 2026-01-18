@@ -128,10 +128,6 @@ graph TD
 
 ---
 
-## 👤 Author
-
-**Naki** (GitHub: [@naki0227](https://github.com/naki0227))
-- Fullstack Developer focused on AI Integration and Product Engineering.
 
 ---
 
