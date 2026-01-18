@@ -26,6 +26,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     init_db()
+    from app.migration import run_migrations
+    run_migrations()
 
 # Routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
