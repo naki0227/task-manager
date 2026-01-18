@@ -43,7 +43,7 @@ async def get_tasks(
     tasks = db.query(Task).filter(
         Task.user_id == user.id,
         Task.status != "archived"
-    ).all()
+    ).order_by(Task.position.asc(), Task.id.desc()).all()
     
     # Map raw model to response (handling JSON fields if needed)
     response = []
@@ -115,5 +115,35 @@ async def delete_task(
         
     # Soft delete instead of hard delete to prevent re-sync
     task.status = "archived"
+    db.commit()
+    return {"status": "success"}
+
+
+class ReorderRequest(BaseModel):
+    task_ids: List[int]
+
+
+@router.put("/prepared-tasks/reorder")
+async def reorder_tasks(
+    request: ReorderRequest,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """Reorder tasks based on the provided list of IDs"""
+    user = get_current_user(authorization, db)
+    
+    # Verify all tasks belong to user
+    tasks = db.query(Task).filter(
+        Task.user_id == user.id,
+        Task.id.in_(request.task_ids)
+    ).all()
+    
+    task_map = {t.id: t for t in tasks}
+    
+    # Update positions
+    for index, task_id in enumerate(request.task_ids):
+        if task_id in task_map:
+            task_map[task_id].position = index
+            
     db.commit()
     return {"status": "success"}

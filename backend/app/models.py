@@ -54,6 +54,7 @@ class Task(Base):
     source = Column(String(50), default="manual")  # manual, github, calendar, slack
     estimated_time = Column(String(50), default="")
     prepared_items = Column(Text, default="[]")  # JSON array
+    position = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

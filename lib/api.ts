@@ -117,6 +117,13 @@ class VisionAPIClient {
         });
     }
 
+    async reorderTasks(taskIds: number[]): Promise<void> {
+        return this.fetch("/api/prepared-tasks/reorder", {
+            method: "PUT",
+            body: JSON.stringify({ task_ids: taskIds }),
+        });
+    }
+
     // System / Quick Launch
     async launchAction(actionId: string): Promise<void> {
         return this.fetch("/api/system/launch", {
