@@ -45,3 +45,12 @@ WebアプリをElectronまたはTauriでラップし、ローカルAPIへのア�
 - **Local-First Sync**: RxDBやElectricSQLを導入し、データの実体をクライアント（ローカル）に持つ。
 - **On-Device AI**: Gemini Nano や Llama などのローカルLLMを活用し、プライバシーデータを外部送信せずに「分析」や「要約」を実行するオプションを提供する。
 
+---
+
+## ⚡️ 6. Technical Performance & UX (Deep Polish)
+**Issue**: LLMの待機時間やチャットUIの入力コストが、「サクサク操作したい」ユーザーの体験を損なう懸念がある。
+**Solution**:
+- **Optimistic UI**: バックエンドの応答を待たず、フロントエンドで即座に「仮のタスク」を表示。バックグラウンドで整合性を取ることで体感レイテンシをゼロにする。
+- **Vector RAG**: スキル分析をキーワードマッチングからベクトル検索（Vector Database）へ移行し、過去の膨大なコード資産から「文脈」を高度に検索可能にする。
+- **Human-in-the-Loop UI**: AIのエージェント動作（削除、変更）に対し、ユーザーが直感的に「Approve/Reject」できる安全装置UIを標準化する。
+
