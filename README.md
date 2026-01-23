@@ -13,6 +13,12 @@
     <img src="https://img.shields.io/badge/AI-Gemini%202.0-8E75B2?style=flat-square&logo=google" alt="Gemini" />
     <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
   </p>
+  
+  <p>
+    <a href="https://zenn.dev/ibukinagase/articles/1ceb282e68031a">
+      <img src="https://img.shields.io/badge/📝_技術解説-Zenn-3EA8FF?style=for-the-badge&logo=zenn" alt="Zenn Article" />
+    </a>
+  </p>
 </div>
 
 ---
