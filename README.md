@@ -188,15 +188,26 @@ pytest e2e/
 
 ## 🗺️ Roadmap
 
+### ✅ v2.0 (Current)
 - [x] Autonomous Agent Core
 - [x] Gmail / Slack Integration
 - [x] Human-in-the-Loop Safety
 - [x] LLM Abstraction (Gemini, OpenAI ready)
 - [x] Prompt Registry (YAML-based)
-- [ ] Chrome Extension
-- [ ] Mobile App (Capacitor)
-- [ ] Multi-user / Teams
-- [ ] SOC 2 Compliance
+- [x] Risk Classification & Audit Logging
+- [x] Async Execution (Celery Workers)
+
+### 🎯 v2.1 (Next)
+- [ ] PWA Optimization (Service Worker, Offline Caching, Push Notifications)
+- [ ] Voice Input for Mobile Approvals
+- [ ] GitHub Integration (Issue Creation)
+- [ ] Notion Integration (Page Creation)
+
+### 🔮 v3.0 (Future)
+- [ ] Webhook Support (External Triggers)
+- [ ] Usage Analytics Dashboard
+- [ ] Multi-language Prompts (EN/JA)
+- [ ] Self-hosted LLM Option (Ollama)
 
 ---
 
