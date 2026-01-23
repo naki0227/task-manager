@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     
     # Database
     database_url: str = "sqlite:///./vision.db"
+    redis_url: str = "redis://redis:6379"
+    sentry_dsn: str = ""
     
     # Server
     port: int = 8000
@@ -49,6 +51,7 @@ class Settings(BaseSettings):
     
     # Environment
     is_cloud_env: bool = False
+    mock_external_apis: bool = False  # Set to True ONLY for testing
 
     class Config:
         env_file = ".env"

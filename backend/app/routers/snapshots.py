@@ -17,6 +17,7 @@ router = APIRouter()
 class SnapshotCreate(BaseModel):
     name: str
     notes: Optional[str] = ""
+    windows: Optional[List[dict]] = None # Allow external input (e.g. from Chrome Extension)
 
 class SnapshotResponse(BaseModel):
     id: int
@@ -30,22 +31,6 @@ class SnapshotResponse(BaseModel):
 
 def get_chrome_tabs():
     """Get list of open tabs from Google Chrome via AppleScript"""
-    script = '''
-    tell application "Google Chrome"
-        set tabList to {}
-        repeat with w in windows
-            repeat with t in tabs of w
-                set titleStr to title of t
-                set urlStr to URL of t
-                set end of tabList to {title:titleStr, url:urlStr}
-            end repeat
-        end repeat
-        return tabList
-    end tell
-    '''
-    # This returns simplified format, we might need to parse output carefully or use simpler list
-    
-    # Better approach: Get URLs as newline separated string
     script_simple = '''
     tell application "Google Chrome"
         set urlList to ""
@@ -59,21 +44,23 @@ def get_chrome_tabs():
     '''
     
     try:
+        import sys
+        if sys.platform != "darwin":
+            return []
+
         result = subprocess.run(['osascript', '-e', script_simple], capture_output=True, text=True)
         if result.returncode != 0:
             print(f"AppleScript Error: {result.stderr}")
             return []
         
         urls = result.stdout.strip().split('\n')
-        # Filter empty
         urls = [u for u in urls if u.strip()]
         
-        # Format for our schema
         windows = []
         if urls:
             windows.append({
                 "type": "browser",
-                "name": "Google Chrome",
+                "name": "Google Chrome (AppleScript)",
                 "urls": urls
             })
             
@@ -92,16 +79,25 @@ async def create_snapshot(
     user = get_current_user(authorization, db)
     
     # Capture Context
-    windows_data = get_chrome_tabs()
+    # If windows provided in request (from Extension), use it. Otherwise capture locally.
+    if request.windows:
+        windows_data = request.windows
+    else:
+        windows_data = get_chrome_tabs()
     
     # Add VS Code (current project) as default if running locally
     # We can assume the current project where the server is running
     repo_path = "/Users/hw24a094/task-management"
-    windows_data.append({
-        "type": "code",
-        "name": "Visual Studio Code",
-        "path": repo_path
-    })
+    
+    # Avoid duplicate VS Code entries if already provided (though unlikely from Chrome Ext)
+    has_vscode = any(w.get("type") == "code" for w in windows_data)
+    
+    if not has_vscode:
+        windows_data.append({
+            "type": "code",
+            "name": "Visual Studio Code",
+            "path": repo_path
+        })
     
     snapshot = Snapshot(
         user_id=user.id,

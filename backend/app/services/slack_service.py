@@ -113,3 +113,14 @@ class SlackService:
                 return True
         
         return False
+        
+    @staticmethod
+    async def post_message(access_token: str, channel_id: str, text: str) -> None:
+        """
+        Slackチャンネルでメッセージを投稿
+        """
+        client = WebClient(token=access_token)
+        try:
+             client.chat_postMessage(channel=channel_id, text=text)
+        except Exception as e:
+             raise Exception(f"Failed to post Slack message: {e}")

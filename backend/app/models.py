@@ -55,11 +55,31 @@ class Task(Base):
     estimated_time = Column(String(50), default="")
     prepared_items = Column(Text, default="[]")  # JSON array
     position = Column(Integer, default=0)
+    deleted = Column(Boolean, default=False) # For soft delete sync
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationship
     user = relationship("User", back_populates="tasks")
+
+
+class Proposal(Base):
+    __tablename__ = "proposals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(500), nullable=False)
+    description = Column(Text, default="")
+    type = Column(String(50), nullable=False)  # email_reply, calendar_event, etc.
+    payload = Column(Text, default="{}")  # JSON data for the action
+    status = Column(String(50), default="pending")  # pending, approved, rejected, executed
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    user = relationship("User", back_populates="proposals")
+
+# Add back_populates to User
+User.proposals = relationship("Proposal", back_populates="user")
 
 
 class Skill(Base):
@@ -121,3 +141,17 @@ class AIActivity(Base):
 User.snapshots = relationship("Snapshot", back_populates="user")
 User.focus_sessions = relationship("FocusSession", back_populates="user")
 User.ai_activities = relationship("AIActivity", back_populates="user")
+User.action_logs = relationship("ActionLog", back_populates="user")
+
+class ActionLog(Base):
+    __tablename__ = "action_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action_type = Column(String(50), nullable=False) # proposal_generated, proposal_approved, execution_success
+    resource_type = Column(String(50), default="unknown") # gmail, slack, task
+    details = Column(Text, default="{}") # JSON payload
+    risk_level = Column(String(20), default="low") # low, medium, high
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="action_logs")

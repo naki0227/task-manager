@@ -7,6 +7,8 @@ import { Sparkles, Zap, Target, ArrowRight } from "lucide-react";
 import { useDream } from "@/contexts/DreamContext";
 import Link from "next/link";
 
+import { ProposalList } from "@/components/autonomous/ProposalList";
+
 export default function Home() {
   const { dream, steps } = useDream();
 
@@ -42,6 +44,9 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Autonomous Proposals */}
+          <ProposalList />
+
           {/* Prepared Tasks */}
           <PreparedTasks />
         </div>

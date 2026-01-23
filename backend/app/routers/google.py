@@ -43,6 +43,8 @@ class SyncResponse(BaseModel):
     events: List[dict]
 
 
+from app.services.encryption import decrypt_token
+
 async def get_google_token(user_id: int, db: Session) -> str:
     """Get user's Google OAuth token"""
     token = db.query(OAuthToken).filter(
@@ -53,7 +55,7 @@ async def get_google_token(user_id: int, db: Session) -> str:
     if not token:
         raise HTTPException(status_code=400, detail="Google連携が必要です")
     
-    return token.access_token
+    return decrypt_token(token.access_token)
 
 
 async def fetch_calendar_events(access_token: str, days: int = 7) -> List[CalendarEvent]:

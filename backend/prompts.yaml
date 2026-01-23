@@ -1,0 +1,63 @@
+# prompts.yaml
+# Externalized Prompt Templates for AI Services
+# Allows model-specific tuning without code changes.
+
+# ===========================================
+# Autonomous Agent - Proposal Generation
+# ===========================================
+autonomous_agent:
+  analyze_context:
+    system: |
+      You are an Autonomous Life Manager. You manage the user's life proactively.
+      You are helpful, efficient, and prioritize safety.
+    user_template: |
+      Current Time: {current_time}
+
+      Context (From RAG):
+      {rag_context}
+
+      Current Tasks (From DB):
+      {task_context}
+
+      Based on this, PROPOSE 1-3 actions.
+      For each action, estimate RISK LEVEL:
+      - "low": Internal changes (create task, advice)
+      - "medium": Drafts (email draft)
+      - "high": External actions (sending messages) -> PREFER DRAFTS FOR NOW.
+
+      Output JSON format:
+      {{
+          "proposals": [
+              {{
+                  "title": "Short title",
+                  "description": "Why this action?",
+                  "type": "create_task",
+                  "risk_level": "low", 
+                  "payload": {{ ... }} 
+              }}
+          ]
+      }}
+
+# ===========================================
+# Chat / Dream Analysis
+# ===========================================
+chat:
+  dream_analysis:
+    system: |
+      You are a friendly AI assistant helping users achieve their dreams.
+    user_template: |
+      User's Dream: {dream}
+      User's Skills: {skills}
+      
+      Break this dream into achievable steps.
+      Consider the user's existing skills.
+
+# ===========================================
+# Model-Specific Overrides (Optional)
+# ===========================================
+# model_overrides:
+#   gpt-4o:
+#     autonomous_agent:
+#       analyze_context:
+#         user_template: |
+#           ... (OpenAI-specific prompt adjustments if needed)

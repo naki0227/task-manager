@@ -146,6 +146,29 @@ class VisionAPIClient {
         });
     }
 
+    // System / Proposals
+    async fetchPendingProposals(): Promise<any[]> {
+        return this.fetch<any[]>("/api/proposals");
+    }
+
+    async approveProposal(id: number): Promise<any> {
+        return this.fetch(`/api/proposals/${id}/approve`, {
+            method: 'POST',
+        });
+    }
+
+    async rejectProposal(id: number): Promise<any> {
+        return this.fetch(`/api/proposals/${id}/reject`, {
+            method: 'POST',
+        });
+    }
+
+    async triggerAutonomousLoop(): Promise<any> {
+        return this.fetch("/api/autonomous/run", {
+            method: 'POST',
+        });
+    }
+
     async getSystemConfig(): Promise<{ is_cloud_env: boolean }> {
         return this.fetch<{ is_cloud_env: boolean }>("/api/system/config");
     }
@@ -219,6 +242,13 @@ class VisionAPIClient {
             // Fallback
             return "すみません、エラーが発生しました。もう一度お試しください。";
         }
+    }
+
+    async confirmTool(tool: string, args: any): Promise<any> {
+        return this.fetch("/api/chat/confirm", {
+            method: "POST",
+            body: JSON.stringify({ tool, args }),
+        });
     }
 
     // Skill Analysis
@@ -324,4 +354,5 @@ export const API_KEYS = {
     statsWeekly: ["stats-weekly"] as const,
     statsMonthly: ["stats-monthly"] as const,
     statsSummary: ["stats-summary"] as const,
+    proposals: ["proposals"] as const,
 };

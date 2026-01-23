@@ -45,6 +45,35 @@ async def chat(
         raise HTTPException(status_code=500, detail="AIサービスの呼び出しに失敗しました")
 
 
+class ConfirmRequest(BaseModel):
+    tool: str
+    args: dict
+
+
+@router.post("/chat/confirm")
+async def confirm_tool_execution(
+    request: ConfirmRequest,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Execute a proposed tool action after user confirmation
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    user = get_current_user(authorization, db)
+    service = get_gemini_service()
+    
+    try:
+        # Execute the tool manually
+        result = await service.execute_tool_proposal(request.tool, request.args, user.id, db)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        print(f"Tool Confirmation Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class AIActivity(BaseModel):
     id: int
     type: str # folder, file, summary, analysis

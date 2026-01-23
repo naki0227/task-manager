@@ -165,6 +165,8 @@ class InitialScanResponse(BaseModel):
     summary: str
 
 
+from app.services.encryption import decrypt_token
+
 async def get_github_token_by_user_id(user_id: int, db: Session) -> Optional[str]:
     """Get user's GitHub OAuth token"""
     token = db.query(OAuthToken).filter(
@@ -172,7 +174,7 @@ async def get_github_token_by_user_id(user_id: int, db: Session) -> Optional[str
         OAuthToken.provider == "github"
     ).first()
     
-    return token.access_token if token else None
+    return decrypt_token(token.access_token) if token else None
 
 
 async def fetch_all_repos_languages(access_token: str) -> List[dict]:
@@ -453,7 +455,7 @@ async def get_github_token(user_id: int, db: Session) -> Optional[str]:
         OAuthToken.provider == "github"
     ).first()
     
-    return token.access_token if token else None
+    return decrypt_token(token.access_token) if token else None
 
 
 async def fetch_github_commits(access_token: str, since_days: int = 7) -> List[dict]:
@@ -708,3 +710,65 @@ async def analyze_dream(
         ))
     
     return result
+
+
+# ========================================
+# RAG / Codebase Query
+# ========================================
+
+class RAGQueryRequest(BaseModel):
+    query: str
+    n_results: int = 4
+
+@router.post("/rag/ingest")
+async def ingest_codebase(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Ingest the current codebase into the vector store
+    """
+    from app.services.rag_service import get_rag_service
+    
+    # Check auth
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    try:
+        service = get_rag_service()
+        # Ingest from current working directory (project root)
+        # Assuming backend is running from backend/ but project root is one level up?
+        # Docker container mounts root at /app? 
+        # Local env: backend is at /Users/hw24a094/task-management/backend
+        # Project root is /Users/hw24a094/task-management
+        import os
+        root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+        
+        count = await service.ingest_codebase(root_path)
+        return {"message": f"Successfully ingested {count} chunks from codebase at {root_path}"}
+    except Exception as e:
+        logger.error(f"Ingestion failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/rag/query")
+async def query_codebase(
+    request: RAGQueryRequest,
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Query the codebase knowledge base
+    """
+    from app.services.rag_service import get_rag_service
+    
+    if not authorization or not authorization.startswith("Bearer "):
+         raise HTTPException(status_code=401, detail="Authentication required")
+         
+    try:
+        service = get_rag_service()
+        results = await service.query_codebase(request.query, request.n_results)
+        return {"results": results}
+    except Exception as e:
+        logger.error(f"Query failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

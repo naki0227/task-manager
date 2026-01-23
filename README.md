@@ -1,133 +1,217 @@
-# DreamCatcher
+# DreamCatcher 🌙
 
 <div align="center">
-  <h3>"AI-Powered Autonomous Life OS"</h3>
-  <p>自律型AIエージェントが、あなたの「夢」を具体的な「行動」に変えるタスク管理プラットフォーム</p>
+  <h3>🤖 Your Autonomous AI Executive Assistant</h3>
+  <p><strong>Proactive. Privacy-First. Safety-First.</strong></p>
+  <p>AIがあなたの代わりに考え、提案し、承認を得てから行動する「自律型AIライフマネージャー」</p>
 
   <p>
     <img src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js" alt="Next.js" />
     <img src="https://img.shields.io/badge/FastAPI-0.109-009688?style=flat-square&logo=fastapi" alt="FastAPI" />
-    <img src="https://img.shields.io/badge/Database-PostgreSQL-336791?style=flat-square&logo=postgresql" alt="PostgreSQL" />
-    <img src="https://img.shields.io/badge/AI-Gemini%202.5-8E75B2?style=flat-square&logo=google" alt="Gemini" />
+    <img src="https://img.shields.io/badge/Celery-5.6-37814A?style=flat-square&logo=celery" alt="Celery" />
+    <img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=flat-square&logo=postgresql" alt="PostgreSQL" />
+    <img src="https://img.shields.io/badge/AI-Gemini%202.0-8E75B2?style=flat-square&logo=google" alt="Gemini" />
     <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
   </p>
 </div>
 
 ---
 
-## 📖 概要 (Overview)
+## 🎯 What is DreamCatcher?
 
-DreamCatcher（ドリームキャッチャー）は、単なるToDoリストを超えた **「目標達成支援システム」** です。
-ユーザーが抱く漠然とした目標（例:「フルスタックエンジニアになりたい」）を入力するだけで、生成AI (Google Gemini 2.5) が現状のスキルセットを分析し、実現までの具体的なロードマップと週間タスクを自動生成します。
+DreamCatcher is not just another task manager. It's an **Autonomous AI Agent** that:
 
-従来のタスク管理ツールが「やるべきこと(Why/What)」の管理に留まるのに対し、DreamCatcherは **「どう実現するか(How)」までをエンジニアリングする** ことを目的としています。
+1. 📥 **Ingests your context** - Gmail, Slack, Google Calendar
+2. 🧠 **Thinks proactively** - Identifies actions you should take
+3. 📝 **Proposes actions** - "Reply to this email", "Create this task"
+4. ✅ **Waits for your approval** - Never acts without permission
+5. ⚡ **Executes safely** - Sends emails, posts to Slack, creates tasks
 
----
-
-## 🚀 技術的なこだわり (Technical Highlights)
-
-本プロジェクトでは、モダンなWeb開発技術とAIの実践的な統合に注力しました。
-
-### 1. Modern Frontend Architecture
-- **Framework**: Next.js (App Router) を採用し、Server Componentsによるパフォーマンス最適化とSEO対策を実施。
-- **UI/UX**: Tailwind CSS + Framer Motion により、直感的で流動的なインタラクションを実現。
-- **State Management**: 複雑なタスク状態管理にはReact Queryを採用し、サーバー状態とUIの同期を効率化。
-
-### 2. Scalable Backend & AI Integration
-- **High Performance**: PythonのFastAPI (Asynchronous) を採用し、AI推論や外部API連携などのI/Oバウンドな処理を非同期で効率的に処理。
-- **Function Calling**: Gemini APIのFunction Calling機能を活用し、チャットインターフェースから「タスク追加」「カレンダー確認」などのシステム操作を自然言語で実行可能に実装。
-- **Robustness**: Pydanticによる厳格な型定義とバリデーションにより、AIの非決定的な出力をシステムが扱える構造化データに変換。
-
-### 3. Data Sync & Integration
-- **Hybrid Database**: ローカル開発時はSQLite、本番環境(Cloud)ではPostgreSQLにシームレスに切り替わるアーキテクチャ設計。
-- **External APIs**: Google Calendar, GitHub, Slack, Notion等、多数の外部サービスとのOAuth認証・データ同期パイプラインを構築。
+> **"Your AI assistant that proposes, but never acts without your permission."**
 
 ---
 
-## ✨ 主な機能 (Core Features)
+## 🚀 Key Features
 
-### 🎯 Dream Analysis Engine (夢分析エンジン)
-ユーザーの「夢」と「現状」のギャップを埋めるためのステップを自動生成します。
-- **スキル分析**: GitHubAPIを通じてコミットログを解析し、ユーザーの現在の技術スタックと熟練度を推定。
-- **ギャップ分析**: 目標達成に不足しているスキルやリソースを特定。
-- **プランニング**: 週間単位の具体的なアクションプラン（学習教材やプロジェクト案）を提示。
+### 🤖 Autonomous Agent Loop
+- **RAG Pipeline**: Ingests Gmail, Slack, Calendar into vector database
+- **Reasoning Engine**: Gemini 2.0 analyzes context and generates proposals
+- **Human-in-the-Loop**: All external actions require explicit approval
+- **Async Execution**: Celery workers handle background tasks
 
-### 🧠 Autonomous Agent (自律エージェント)
-チャットボットが単なる相談相手ではなく、実務を行うアシスタントとして機能します。
-- 「来週の空き時間は？」→ Google Calendarを確認して回答。
-- 「このタスクを登録して」→ データベースにTodoを作成し、必要に応じてSlack通知。
+### 🛡️ Safety-First Architecture
+- **Risk Classification**: Proposals labeled as low/medium/high risk
+- **Rate Limiting**: Prevents runaway AI loops (Redis-backed)
+- **Audit Logging**: Every AI decision recorded in `ActionLog`
+- **Encrypted Tokens**: OAuth credentials encrypted at rest (Fernet)
 
-### ⏱️ Focus & Flow State Support
-- **Focus Timer**: ポモドーロテクニックに基づいたタイマー機能。
-- **Infinite Context Resume**: (Local Only) "あの作業をしていた状態" をスナップショットとして保存。ブラウザのタブセットやVS Codeのワークスペース状態をワンクリックで復元。
+### 🔌 Universal Integrations
+| Service | Read | Write |
+|---------|------|-------|
+| Gmail | ✅ Emails | ✅ Drafts |
+| Slack | ✅ Messages | ✅ Post |
+| Google Calendar | ✅ Events | 🔜 Create |
+| GitHub | ✅ Issues | 🔜 Create |
+| Notion | ✅ Pages | 🔜 Create |
+
+### 🎨 Modern UI
+- **Next.js 15** with App Router
+- **Framer Motion** animations
+- **Dark Mode** first
+- **PWA** ready
 
 ---
 
-## 🏗️ アーキテクチャ図 (System Architecture)
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
-    User((User)) --> Client[Next.js Client]
-    Client -->|REST API| Server[FastAPI Server]
+    User((User)) --> Frontend[Next.js Frontend]
+    Frontend -->|REST API| Backend[FastAPI Backend]
     
-    subgraph "Backend Services"
-        Server --> Auth[OAuth Manager]
-        Server --> Agent[AI Agent Service]
-        Server --> Sync[Sync Worker]
+    subgraph "AI Pipeline"
+        Backend --> RAG[RAG Service<br/>pgvector]
+        Backend --> Reasoning[Reasoning Service<br/>Gemini 2.0]
+        Backend --> Safety[Safety Service<br/>Rate Limit + Audit]
+    end
+    
+    subgraph "Async Workers"
+        Backend --> Redis[(Redis)]
+        Redis --> Worker[Celery Worker]
+        Worker --> Actions[Action Service]
+    end
+    
+    subgraph "External APIs"
+        Actions --> Gmail[Gmail API]
+        Actions --> Slack[Slack API]
+        RAG --> Gmail
+        RAG --> Slack
     end
     
     subgraph "Data Store"
-        Server --> DB[(PostgreSQL)]
-        Agent --> VectorDB[(Log Store)]
-    end
-    
-    subgraph "External Ecosystem"
-        Agent -->|LLM| Gemini[Google Gemini API]
-        Sync <-->|Sync| GCal[Google Calendar]
-        Sync <-->|Analyze| GitHub[GitHub API]
-        Sync <-->|Import| Notion[Notion API]
+        Backend --> DB[(PostgreSQL<br/>+ pgvector)]
     end
 ```
 
 ---
 
-## 🛠️ 開発環境のセットアップ (Getting Started)
+## 🛠️ Quick Start
 
-ローカル環境での簡単な起動方法を記載します。
-
-### 前提条件
+### Prerequisites
 - Docker & Docker Compose
+- Google Gemini API Key
 
-### 起動手順
-1. リポジトリをクローン
-   ```bash
-   git clone https://github.com/naki0227/task-manager.git
-   cd task-manager
-   ```
-2. 環境変数の設定 (`.env.example` をコピー)
-   ```bash
-   cp .env.example .env
-   # GEMINI_API_KEY のみを設定すれば最小構成で動作します
-   ```
-3. コンテナ起動
-   ```bash
-   docker-compose up --build
-   ```
-   - Frontend: http://localhost:3000
-   - API Docs: http://localhost:8000/docs
+### Development Setup
+
+```bash
+# Clone
+git clone https://github.com/naki0227/task-manager.git
+cd task-manager
+
+# Configure
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY
+
+# Start (Hybrid Mode: Backend in Docker, Frontend Local)
+make dev
+```
+
+### Production Deployment
+
+```bash
+# Use production config (no volume mounts)
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Available Commands
+
+```bash
+make up        # Start all services
+make dev       # Hybrid dev mode (Backend Docker + Frontend Local)
+make logs      # View all logs
+make shell     # Shell into backend container
+make migrate   # Run DB migrations
+make clean     # Stop and remove volumes
+```
 
 ---
 
-## 🗺️ 将来の展望 (Roadmap)
+## 📁 Project Structure
 
-現在、[GitHub Issues](https://github.com/naki0227/task-manager/issues) にて以下の機能開発を計画・進行しています。
+```
+├── frontend/           # Next.js 15 App
+├── backend/
+│   ├── app/
+│   │   ├── routers/    # API endpoints
+│   │   ├── services/   # Business logic
+│   │   │   ├── llm/    # LLM abstraction (Gemini, OpenAI ready)
+│   │   │   ├── reasoning.py   # AI proposal generation
+│   │   │   ├── action.py      # Execution logic
+│   │   │   └── safety.py      # Rate limiting, audit
+│   │   └── worker.py   # Celery tasks
+│   ├── prompts.yaml    # Externalized AI prompts
+│   └── alembic/        # DB migrations
+├── docker-compose.yml      # Development
+├── docker-compose.prod.yml # Production
+└── Makefile               # Developer shortcuts
+```
 
-- [ ] **Mobile Native App (React Native)**: 外出先でのタスク確認とプッシュ通知の実現 (#19)
-- [ ] **VS Code Extension**: エディタ内でのタスク管理とコーディング時間の自動計測 (#20)
-- [ ] **Offline-First**: RxDBを用いたローカルファーストなデータ同期基盤の構築 (#22)
+---
+
+## 🔐 Security
+
+- **OAuth 2.0** for all integrations (Google, Slack, GitHub, etc.)
+- **Token Encryption** using Fernet (AES-128)
+- **Human-in-the-Loop** for all external actions
+- **Rate Limiting** via Redis (Token Bucket algorithm)
+- **Audit Trail** in `ActionLog` table
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run integration tests
+docker-compose exec -e MOCK_EXTERNAL_APIS=true backend python -m pytest tests/
+
+# Run E2E tests
+pytest e2e/
+```
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Autonomous Agent Core
+- [x] Gmail / Slack Integration
+- [x] Human-in-the-Loop Safety
+- [x] LLM Abstraction (Gemini, OpenAI ready)
+- [x] Prompt Registry (YAML-based)
+- [ ] Chrome Extension
+- [ ] Mobile App (Capacitor)
+- [ ] Multi-user / Teams
+- [ ] SOC 2 Compliance
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
 <p align="center">
-  <small>© 2026 DreamCatcher Project. MIT License.</small>
+  <strong>🌙 DreamCatcher - Catch Your Dreams, Automate Your Life</strong>
+  <br/>
+  <small>© 2026 DreamCatcher Project</small>
 </p>

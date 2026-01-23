@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, tasks, skills, stats, login, users, google, github, slack, chat, linear, system, snapshots, todoist, notion
+from app.routers import auth, tasks, skills, stats, login, users, google, github, slack, chat, linear, system, snapshots, todoist, notion, sync, rag, proposals, autonomy, gmail
 
 # Settings
 settings = get_settings()
@@ -12,6 +12,15 @@ app = FastAPI(
     description="DreamCatcher - AI-Powered Life OS",
     version="0.1.0",
 )
+
+# Sentry Init
+import sentry_sdk
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 # CORS
 app.add_middleware(
@@ -28,6 +37,16 @@ async def startup():
     init_db()
     from app.migration import run_migrations
     run_migrations()
+    
+    # Init Redis
+    from app.core.redis import redis_client
+    await redis_client.init_redis()
+    
+    # Register Event Listeners
+    
+    # Register Event Listeners
+    from app.listeners import register_listeners
+    register_listeners()
 
 # Routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
@@ -45,6 +64,16 @@ app.include_router(slack.router, tags=["Slack"])
 app.include_router(linear.router, prefix="/api", tags=["Linear"])
 app.include_router(todoist.router, prefix="/api", tags=["Todoist"])
 app.include_router(notion.router, prefix="/api", tags=["Notion"])
+app.include_router(sync.router, prefix="/api", tags=["Sync"])
+app.include_router(rag.router, prefix="/api", tags=["RAG"])
+app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
+app.include_router(autonomy.router, prefix="/api", tags=["Autonomy"])
+app.include_router(gmail.router, prefix="/api", tags=["Gmail"])
+
+@app.on_event("shutdown")
+async def shutdown():
+    from app.core.redis import redis_client
+    await redis_client.close_redis()
 
 
 @app.get("/")
