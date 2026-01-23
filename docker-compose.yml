@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build: ./backend
@@ -9,7 +7,7 @@ services:
       - ./backend:/app
       - ./backend/vision.db:/app/vision.db
     environment:
-      - DATABASE_URL=sqlite:///./vision.db
+      - DATABASE_URL=postgresql://user:password@db:5432/vision
       # Pass through API keys
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
@@ -24,17 +22,60 @@ services:
       - TODOIST_CLIENT_SECRET=${TODOIST_CLIENT_SECRET}
       - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
       - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
-      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - DEBUG=${DEBUG}
+      - MOCK_EXTERNAL_APIS=${MOCK_EXTERNAL_APIS}
+      - REDIS_URL=redis://redis:6379
 
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
+  db:
+    image: pgvector/pgvector:pg16
     ports:
-      - "3000:3000"
+      - "5432:5432"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-vision}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d vision" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build: ./backend
+    command: celery -A app.worker.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/vision
+      - REDIS_URL=redis://redis:6379
+      # Pass through API keys
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MOCK_EXTERNAL_APIS=${MOCK_EXTERNAL_APIS}
+    volumes:
+      - ./backend:/app
     depends_on:
-      - backend
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  db_data:

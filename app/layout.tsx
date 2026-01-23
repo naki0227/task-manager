@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_JP } from "next/font/google";
+import { Inter } from "next/font/google"; // Removed Noto_Sans_JP to fix build
 import "./globals.css";
 import { ClientProviders } from "@/components/providers/ClientProviders";
 
@@ -8,10 +8,7 @@ const inter = Inter({
   variable: "--font-sans",
 });
 
-const notoSansJP = Noto_Sans_JP({
-  subsets: ["latin"],
-  variable: "--font-jp",
-});
+// const notoSansJP = Noto_Sans_JP({ ... }) // Removed
 
 export const metadata: Metadata = {
   title: "DreamCatcher",
@@ -41,7 +38,7 @@ export default function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className={`${inter.variable} ${notoSansJP.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`}>
         <ClientProviders>{children}</ClientProviders>
       </body>
     </html>

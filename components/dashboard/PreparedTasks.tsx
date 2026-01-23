@@ -1,4 +1,3 @@
-
 import {
     DndContext,
     closestCenter,
@@ -16,9 +15,10 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { Play, FolderOpen, FileCode, Clock, Sparkles, CheckCircle2, Loader2, Trash2, Cloud, CloudOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { visionAPI, PreparedTask } from "@/lib/api";
+import { useRxTasks, RxTask } from "@/hooks/useRxTasks";
 
 const SOURCE_COLORS = {
     github: "from-purple-500 to-purple-600",
@@ -39,8 +39,8 @@ const SOURCE_LABELS = {
 // Sortable Item Component
 function SortableTaskItem(props: {
     task: PreparedTask;
-    onStart: (id: number) => void;
-    onDelete: (id: number) => void;
+    onStart: (id: string) => void;
+    onDelete: (id: string) => void;
 }) {
     const { task, onStart, onDelete } = props;
     const {
@@ -50,7 +50,7 @@ function SortableTaskItem(props: {
         transform,
         transition,
         isDragging
-    } = useSortable({ id: task.id });
+    } = useSortable({ id: task.id.toString() });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -58,6 +58,22 @@ function SortableTaskItem(props: {
         zIndex: isDragging ? 10 : 1,
         opacity: isDragging ? 0.5 : 1,
     };
+
+    // Helper to map generic string source to key logic if needed
+    const sourceKey = (task.source in SOURCE_COLORS) ? task.source : 'manual';
+
+    // Parse prepared items if string (RxDB storage)
+    let preparedItemsList: string[] = [];
+    if (typeof task.preparedItems === 'string') {
+        try {
+            preparedItemsList = JSON.parse(task.preparedItems);
+        } catch { preparedItemsList = []; }
+    } else if (Array.isArray(task.preparedItems)) {
+        preparedItemsList = task.preparedItems;
+    }
+
+    // Cast task.id to string for handlers
+    const taskIdStr = String(task.id);
 
     return (
         <div
@@ -69,7 +85,7 @@ function SortableTaskItem(props: {
         >
             <div className="flex gap-4">
                 {/* Left: Source Indicator */}
-                <div className={`w-1 rounded-full bg-gradient-to-b ${SOURCE_COLORS[task.source]}`} />
+                <div className={`w-1 rounded-full bg-gradient-to-b ${SOURCE_COLORS[sourceKey] || SOURCE_COLORS.manual}`} />
 
                 {/* Content */}
                 <div className="flex-1">
@@ -77,8 +93,8 @@ function SortableTaskItem(props: {
                     <div className="flex items-start justify-between mb-2">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r ${SOURCE_COLORS[task.source]} text-white`}>
-                                    {SOURCE_LABELS[task.source]}
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r ${SOURCE_COLORS[sourceKey] || SOURCE_COLORS.manual} text-white`}>
+                                    {SOURCE_LABELS[sourceKey] || "Other"}
                                 </span>
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <Clock className="w-3 h-3" />
@@ -94,14 +110,14 @@ function SortableTaskItem(props: {
                             {task.status === "ready" && (
                                 <>
                                     <button
-                                        onClick={() => onStart(task.id)}
+                                        onClick={() => onStart(taskIdStr)}
                                         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity shrink-0"
                                     >
                                         <Play className="w-4 h-4" />
                                         始める
                                     </button>
                                     <button
-                                        onClick={() => onDelete(task.id)}
+                                        onClick={() => onDelete(taskIdStr)}
                                         className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                                         title="削除"
                                     >
@@ -131,7 +147,7 @@ function SortableTaskItem(props: {
                             AIが準備したもの
                         </p>
                         <ul className="space-y-1">
-                            {task.preparedItems.map((item, idx) => (
+                            {preparedItemsList.map((item, idx) => (
                                 <li key={idx} className="text-sm text-foreground/80 flex items-center gap-2">
                                     <FileCode className="w-3 h-3 text-primary/50" />
                                     {item}
@@ -146,13 +162,24 @@ function SortableTaskItem(props: {
 }
 
 export function PreparedTasks() {
-    const [tasks, setTasks] = useState<PreparedTask[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Switch to RxDB hook
+    const { tasks: rxTasks, loading, startTask, deleteTask, reorderTasks } = useRxTasks();
+
+    // Map RxTask to PreparedTask shape
+    const tasks: PreparedTask[] = rxTasks.map(t => ({
+        id: t.id as any, // ID mismatch (string vs number), we handle it by casting carefully
+        title: t.title,
+        description: t.description,
+        preparedItems: typeof t.prepared_items === 'string' ? JSON.parse(t.prepared_items) : [],
+        estimatedTime: t.estimated_time || "15m",
+        source: (t.source as any) || "manual",
+        status: (t.status as any) || "ready"
+    }));
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Require 8px movement before drag starts (prevent accidental clicks)
+                distance: 8,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -160,36 +187,18 @@ export function PreparedTasks() {
         })
     );
 
-    useEffect(() => {
-        const loadTasks = async () => {
-            try {
-                const data = await visionAPI.getPreparedTasks();
-                setTasks(data);
-            } catch (e) {
-                console.error("Failed to load tasks", e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadTasks();
-    }, []);
-
-    const handleStart = async (taskId: number) => {
+    const handleStart = async (taskId: string) => {
         try {
-            await visionAPI.startTask(taskId);
-            setTasks(prev =>
-                prev.map(t => t.id === taskId ? { ...t, status: "in-progress" as const } : t)
-            );
+            await startTask(taskId);
         } catch (e) {
             console.error("Failed to start task", e);
         }
     };
 
-    const handleDelete = async (taskId: number) => {
+    const handleDelete = async (taskId: string) => {
         if (!confirm("このタスクを削除しますか？")) return;
         try {
-            await visionAPI.deleteTask(taskId);
-            setTasks(prev => prev.filter(t => t.id !== taskId));
+            await deleteTask(taskId);
         } catch (e) {
             console.error("Failed to delete task", e);
         }
@@ -199,17 +208,21 @@ export function PreparedTasks() {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
-            setTasks((items) => {
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
+            // Find old/new index
+            const oldIndex = rxTasks.findIndex(t => t.id === active.id);
+            const newIndex = rxTasks.findIndex(t => t.id === over.id);
 
-                const newItems = arrayMove(items, oldIndex, newIndex);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                // Optimistic reorder if using local state? 
+                // RxDB will trigger update from DB.
+                // We calculate the new order array and pass to reorderTasks.
+                const newOrderFn = arrayMove(rxTasks, oldIndex, newIndex);
+                // We re-assign updated 'position' index to each
+                const updated = newOrderFn.map((t, idx) => ({ ...t, position: idx }));
 
-                // Call API in background
-                visionAPI.reorderTasks(newItems.map(t => t.id)).catch(console.error);
-
-                return newItems;
-            });
+                // Call hook
+                await reorderTasks(updated);
+            }
         }
     };
 
@@ -229,9 +242,15 @@ export function PreparedTasks() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold">AIが準備完了</h2>
+                    <h2 className="text-lg font-semibold">AIが準備完了 (Local-First Sync)</h2>
                 </div>
-                <span className="text-sm text-muted-foreground">{readyTasks.length} 件のタスクが開始可能</span>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                        <Cloud className="w-3 h-3" />
+                        Sync On
+                    </div>
+                    <span className="text-sm text-muted-foreground">{readyTasks.length} 件のタスク</span>
+                </div>
             </div>
 
             {/* Task Cards */}

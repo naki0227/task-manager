@@ -10,6 +10,7 @@ interface Message {
     role: "user" | "assistant";
     content: string;
     timestamp: Date;
+    isTyping?: boolean;
 }
 
 const WELCOME_MESSAGE: Message = {
@@ -33,14 +34,25 @@ export default function ChatPage() {
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
 
+        const timestamp = new Date();
         const userMessage: Message = {
             id: Date.now(),
             role: "user",
             content: input.trim(),
-            timestamp: new Date(),
+            timestamp,
         };
 
-        setMessages((prev) => [...prev, userMessage]);
+        const tempAiId = Date.now() + 1;
+        const tempAiMessage: Message = {
+            id: tempAiId,
+            role: "assistant",
+            content: "",
+            timestamp,
+            isTyping: true,
+        };
+
+        // Optimistic UI: Add user message AND placeholder AI message immediately
+        setMessages((prev) => [...prev, userMessage, tempAiMessage]);
         setInput("");
         setIsLoading(true);
 
@@ -48,17 +60,19 @@ export default function ChatPage() {
         try {
             const response = await visionAPI.chatWithAI(input.trim());
 
-            const assistantMessage: Message = {
-                id: Date.now(),
-                role: "assistant",
-                content: response,
-                timestamp: new Date(),
-            };
-
-            setMessages((prev) => [...prev, assistantMessage]);
+            // Replace placeholder with real response
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.id === tempAiId
+                        ? { ...msg, content: response, isTyping: false }
+                        : msg
+                )
+            );
         } catch (e) {
             console.error(e);
-            // Error fallback
+            // Error handling: Remove the placeholder and show error
+            setMessages((prev) => prev.filter(msg => msg.id !== tempAiId));
+            alert("AIからの応答に失敗しました。");
         } finally {
             setIsLoading(false);
         }
@@ -105,7 +119,84 @@ export default function ChatPage() {
                                 : "bg-muted rounded-bl-md"
                                 }`}
                         >
-                            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                            {message.isTyping ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground animate-pulse">Thinking...</span>
+                                    <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : (
+                                <div>
+                                    {/* Check if content is a JSON proposal */}
+                                    {(() => {
+                                        try {
+                                            const json = JSON.parse(message.content);
+                                            if (json.type === "proposal") {
+                                                return (
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2 text-amber-500 font-medium pb-2 border-b border-amber-500/20">
+                                                            <Sparkles className="w-4 h-4" />
+                                                            <span>Action Required</span>
+                                                        </div>
+                                                        <p className="text-sm font-medium">{json.message}</p>
+                                                        <div className="bg-background/50 p-2 rounded text-xs font-mono mb-2">
+                                                            {json.tool}({JSON.stringify(json.args)})
+                                                        </div>
+                                                        <div className="flex gap-2 pt-1">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        setMessages(prev => [...prev, {
+                                                                            id: Date.now(),
+                                                                            role: "user",
+                                                                            content: "Approved: " + json.tool,
+                                                                            timestamp: new Date()
+                                                                        }]);
+
+                                                                        const res = await visionAPI.confirmTool(json.tool, json.args);
+
+                                                                        setMessages(prev => [...prev, {
+                                                                            id: Date.now() + 1,
+                                                                            role: "assistant",
+                                                                            content: "✅ Executed: " + JSON.stringify(res.result),
+                                                                            timestamp: new Date()
+                                                                        }]);
+                                                                    } catch (e) {
+                                                                        alert("Execution failed");
+                                                                    }
+                                                                }}
+                                                                className="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm hover:bg-green-600 transition-colors"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setMessages(prev => [...prev, {
+                                                                        id: Date.now(),
+                                                                        role: "user",
+                                                                        content: "Rejected: " + json.tool,
+                                                                        timestamp: new Date()
+                                                                    }, {
+                                                                        id: Date.now() + 1,
+                                                                        role: "assistant",
+                                                                        content: "Action cancelled.",
+                                                                        timestamp: new Date()
+                                                                    }]);
+                                                                }}
+                                                                className="px-3 py-1.5 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition-colors"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                        } catch (e) {
+                                            // Not JSON, render as text
+                                        }
+                                        return <p className="whitespace-pre-wrap text-sm">{message.content}</p>;
+                                    })()}
+                                </div>
+                            )}
                         </div>
                         {message.role === "user" && (
                             <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
@@ -114,17 +205,6 @@ export default function ChatPage() {
                         )}
                     </motion.div>
                 ))}
-
-                {isLoading && (
-                    <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <Bot className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="bg-muted p-4 rounded-2xl rounded-bl-md">
-                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                        </div>
-                    </div>
-                )}
 
                 <div ref={messagesEndRef} />
             </div>
@@ -138,6 +218,7 @@ export default function ChatPage() {
                     onKeyDown={handleKeyDown}
                     placeholder="メッセージを入力..."
                     className="flex-1 bg-transparent focus:outline-none"
+                    disabled={isLoading}
                 />
                 <button
                     onClick={handleSend}

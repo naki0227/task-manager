@@ -1,0 +1,68 @@
+# docker-compose.prod.yml
+# Production configuration - NO volume mounts for code
+# Use: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NOTION_CLIENT_ID=${NOTION_CLIENT_ID}
+      - NOTION_CLIENT_SECRET=${NOTION_CLIENT_SECRET}
+      - TODOIST_CLIENT_ID=${TODOIST_CLIENT_ID}
+      - TODOIST_CLIENT_SECRET=${TODOIST_CLIENT_SECRET}
+      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}
+      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+      - REDIS_URL=${REDIS_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    depends_on:
+      - redis
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build: ./backend
+    command: celery -A app.worker.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    depends_on:
+      - redis
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  redis_data:

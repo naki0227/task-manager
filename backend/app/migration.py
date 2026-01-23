@@ -28,5 +28,15 @@ def run_migrations():
                 conn.commit()
                 logger.info("Migration successful: Added 'position' to 'tasks'.")
                 
+            # Check 'tasks' table for 'deleted' column
+            try:
+                conn.execute(text("SELECT deleted FROM tasks LIMIT 1"))
+                logger.info("Column 'deleted' already exists in 'tasks'.")
+            except Exception:
+                logger.info("Column 'deleted' missing in 'tasks'. Adding it...")
+                conn.execute(text("ALTER TABLE tasks ADD COLUMN deleted BOOLEAN DEFAULT 0")) # 0 for False in SQLite/Postgres compatibility
+                conn.commit()
+                logger.info("Migration successful: Added 'deleted' to 'tasks'.")
+                
         except Exception as e:
             logger.error(f"Migration failed or checked failed: {e}")

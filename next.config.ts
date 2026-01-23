@@ -1,14 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/:path*`,
-      },
-    ];
+  output: 'export',
+  images: {
+    unoptimized: true,
   },
+  // Note: rewrites() are ignored in static export mode.
+  // API calls must use absolute URLs (handled by NEXT_PUBLIC_API_URL).
+  // async rewrites() { ... } 
 };
 
 export default nextConfig;

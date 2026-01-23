@@ -33,23 +33,28 @@ async def get_or_create_user_by_email(email: str, name: str, db: Session) -> Use
     return user
 
 
+from app.services.encryption import encrypt_token
+
 async def save_oauth_token(user_id: int, provider: str, access_token: str, refresh_token: str = None, db: Session = None):
-    """Save or update OAuth token"""
+    """Save or update OAuth token (Encrypted)"""
+    encrypted_access = encrypt_token(access_token)
+    encrypted_refresh = encrypt_token(refresh_token) if refresh_token else None
+
     existing = db.query(OAuthToken).filter(
         OAuthToken.user_id == user_id,
         OAuthToken.provider == provider
     ).first()
     
     if existing:
-        existing.access_token = access_token
-        existing.refresh_token = refresh_token
+        existing.access_token = encrypted_access
+        existing.refresh_token = encrypted_refresh
         existing.updated_at = datetime.utcnow()
     else:
         token = OAuthToken(
             user_id=user_id,
             provider=provider,
-            access_token=access_token,
-            refresh_token=refresh_token,
+            access_token=encrypted_access,
+            refresh_token=encrypted_refresh,
         )
         db.add(token)
     

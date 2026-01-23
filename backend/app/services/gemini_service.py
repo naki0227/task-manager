@@ -324,7 +324,24 @@ JSONのみを返し、他の説明文は含めないでください。
                         if "db" in sig.parameters:
                             kwargs["db"] = db
                             
+                        # SENSITIVE TOOLS CHECK (Human-in-the-Loop)
+                        # If tool is sensitive, STOP execution and return proposal
+                        SENSITIVE_TOOLS = ["add_task", "launch_app"]
+                        
+                        if func_name in SENSITIVE_TOOLS:
+                            print(f"Intercepting sensitive tool: {func_name}")
+                            proposal = {
+                                "type": "proposal",
+                                "tool": func_name,
+                                "args": func_args,
+                                "message": f"I want to execute: {func_name}" 
+                            }
+                            # Update system prompt context or return distinctive response?
+                            # We return JSON string directly. Chat router will pass this to frontend.
+                            return json.dumps(proposal)
+                            
                         result = await func(**kwargs)
+
                         
                         # LOGGING
                         if user_id and db:
@@ -570,6 +587,34 @@ JSONのみを返し、他の説明文は含めないでください。
                 "newSkillsDetected": [],
                 "summary": "分析結果の解析に失敗しました"
             }
+
+    async def execute_tool_proposal(self, tool_name: str, args: dict, user_id: int, db: Session) -> dict:
+        """
+        Execute a tool AFTER user confirmation
+        """
+        if tool_name not in TOOL_FUNCTIONS:
+             raise ValueError("Tool not found")
+             
+        func = TOOL_FUNCTIONS[tool_name]
+        
+        # Inject dependencies
+        try:
+            import inspect
+            sig = inspect.signature(func)
+            kwargs = {}
+            for k, v in args.items():
+                kwargs[k] = v
+            
+            if "user_id" in sig.parameters:
+                kwargs["user_id"] = user_id
+            if "db" in sig.parameters:
+                kwargs["db"] = db
+                
+            result = await func(**kwargs)
+            return result
+        except Exception as e:
+            print(f"Manual Tool execution error: {e}")
+            raise e
 
 # シングルトンインスタンス
 _gemini_service = None

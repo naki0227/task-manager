@@ -16,6 +16,8 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+from app.services.encryption import decrypt_token
+
 async def get_notion_token(user_id: int, db: Session) -> str:
     """Get user's Notion OAuth token"""
     token = db.query(OAuthToken).filter(
@@ -26,7 +28,7 @@ async def get_notion_token(user_id: int, db: Session) -> str:
     if not token:
         raise HTTPException(status_code=400, detail="Notion連携が必要です")
     
-    return token.access_token
+    return decrypt_token(token.access_token)
 
 
 async def sync_notion_pages_task(user_id: int):
