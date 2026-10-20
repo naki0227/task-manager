@@ -87,7 +87,7 @@ async def create_snapshot(
     
     # Add VS Code (current project) as default if running locally
     # We can assume the current project where the server is running
-    repo_path = "/Users/hw24a094/task-management"
+    repo_path = os.environ.get("PROJECT_ROOT") or str(__import__("pathlib").Path(__file__).resolve().parents[3])
     
     # Avoid duplicate VS Code entries if already provided (though unlikely from Chrome Ext)
     has_vscode = any(w.get("type") == "code" for w in windows_data)

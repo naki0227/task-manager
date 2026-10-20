@@ -739,8 +739,8 @@ async def ingest_codebase(
         # Ingest from current working directory (project root)
         # Assuming backend is running from backend/ but project root is one level up?
         # Docker container mounts root at /app? 
-        # Local env: backend is at /Users/hw24a094/task-management/backend
-        # Project root is /Users/hw24a094/task-management
+        # Local env: backend is at <repo>/backend
+        # Project root is <repo>
         import os
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
         
