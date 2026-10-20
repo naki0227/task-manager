@@ -151,7 +151,7 @@ async def launch_app(action_id: str):
     
     try:
         if action_id == "dev_env":
-            repo_path = "/Users/hw24a094/task-management"
+            repo_path = os.environ.get("PROJECT_ROOT") or str(__import__("pathlib").Path(__file__).resolve().parents[3])
             subprocess.Popen(["open", "-a", "Visual Studio Code", repo_path])
             subprocess.Popen(["open", "-a", "Terminal", repo_path])
             return {"status": "success", "message": "Development environment (VS Code + Terminal) launched."}

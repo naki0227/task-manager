@@ -39,7 +39,7 @@ async def launch_action(request: LaunchRequest):
             # Project root -> .../task-management
             
             # Actually simpler: just open the repo path
-            repo_path = "/Users/hw24a094/task-management"
+            repo_path = os.environ.get("PROJECT_ROOT") or str(__import__("pathlib").Path(__file__).resolve().parents[3])
             # Use open -a for VS Code to avoid PATH issues
             subprocess.Popen(["open", "-a", "Visual Studio Code", repo_path])
             subprocess.Popen(["open", "-a", "Terminal", repo_path])
