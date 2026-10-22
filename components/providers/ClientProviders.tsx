@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { MotionConfig } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -31,6 +32,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
     }));
 
     return (
+        <MotionConfig reducedMotion="user">
         <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
                 <ThemeProvider>
@@ -58,5 +60,6 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                 </ThemeProvider>
             </QueryClientProvider>
         </ErrorBoundary>
+        </MotionConfig>
     );
 }
