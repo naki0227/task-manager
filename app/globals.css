@@ -82,3 +82,10 @@ body {
 .glow {
   box-shadow: 0 0 20px rgba(62, 168, 255, 0.3);
 }
+
+/* 動きを減らす設定のときは、点滅するだけの飾りを止める（スピナーは読み込み中の合図なので残す） */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
+}
